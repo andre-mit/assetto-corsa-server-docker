@@ -55,6 +55,9 @@ services:
     restart: unless-stopped
     labels:
       - "app.assetto-corsa.service=ac-server"
+      - "coolify.name=ac-server"
+      - "coolify.icon=https://cdn2.steamgriddb.com/icon_thumb/97208e4cb6de9c04b325c2185316439f.png"
+      - "coolify.type=application"
 
   ac-manager-next:
     build:

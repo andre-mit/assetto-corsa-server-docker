@@ -1,35 +1,45 @@
+networks:
+  coolify:
+    external: true
+
 volumes:
   ac-shared-config: # Config .ini/.yml — persisted, editable via ac-manager
   ac-shared-content: # Game content (cars, tracks)
-  ac-sqlserver-data:
-    # SQL Server data (only used when profile 'sqlserver' is active)
+  ac-postgres-data:
+    # PostgreSQL data (only when profile 'postgres' is active)
 
 services:
-  sqlserver:
+
+  # Optional managed PostgreSQL — activate with COMPOSE_PROFILES=postgres
+  # Leave unset to use an external PostgreSQL (set DATABASE_URL directly)
+  postgres:
     profiles:
-      - sqlserver
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: ac-sqlserver
+      - postgres
+    image: postgres:16-alpine
+    container_name: ac-postgres
     environment:
-      SA_PASSWORD: ${SQLSERVER_SA_PASSWORD}
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: "Express"
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres}
+      POSTGRES_DB: ${PG_DATABASE:-ac_manager}
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - ac-sqlserver-data:/var/opt/mssql
+      - ac-postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -Q 'SELECT 1' || exit 1" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 5
+    networks:
+      - default
+      - coolify
 
   ac-server:
     build:
       context: .
       dockerfile: ac-server/Dockerfile
+      network: host
     container_name: ac-server-instance
     environment:
       - STEAM_USER=${STEAM_USER}
@@ -43,14 +53,17 @@ services:
       - ac-shared-config:/home/steam/ac-server/cfg
       - ac-shared-content:/home/steam/ac-server/content
     restart: unless-stopped
+    labels:
+      - "app.assetto-corsa.service=ac-server"
 
   ac-manager-next:
     build:
       context: ./ac-manager
+      network: host
     container_name: ac-web-manager
     working_dir: /app
-    ports:
-      - "3000:3000"
+    expose:
+      - 3000
     volumes:
       - ac-shared-config:/app/cfg
       - ac-shared-content:/app/game-content
@@ -58,19 +71,20 @@ services:
     environment:
       - HOSTNAME=${WEB_HOSTNAME}
       - DATABASE_URL=${DATABASE_URL}
-      - MSSQL_HOST=${MSSQL_HOST}
-      - MSSQL_PORT=${MSSQL_PORT}
-      - MSSQL_USER=${MSSQL_USER}
-      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
-      - MSSQL_DATABASE=${MSSQL_DATABASE}
-      - MSSQL_ENCRYPT=${MSSQL_ENCRYPT}
-      - MSSQL_TRUST_SERVER_CERTIFICATE=${MSSQL_TRUST_SERVER_CERTIFICATE}
       - JWT_SECRET=${JWT_SECRET}
       - MASTER_EMAIL=${MASTER_EMAIL}
       - MASTER_PASSWORD=${MASTER_PASSWORD}
       - MASTER_NAME=${MASTER_NAME}
       - CONFIG_DIR=/app/cfg
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
     restart: unless-stopped
     depends_on:
       ac-server:
         condition: service_started
+    networks:
+      - default
+      - coolify

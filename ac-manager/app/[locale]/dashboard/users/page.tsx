@@ -62,7 +62,7 @@ export default function UsersPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<"ADMIN" | "VIEWER">("VIEWER");
+  const [newRole, setNewRole] = useState<"MASTER" | "ADMIN" | "VIEWER">("VIEWER");
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);

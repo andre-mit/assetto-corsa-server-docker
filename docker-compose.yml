@@ -1,7 +1,3 @@
-networks:
-  coolify:
-    external: true
-
 volumes:
   ac-shared-config: # Config .ini/.yml — persisted, editable via ac-manager
   ac-shared-content: # Game content (cars, tracks)
@@ -31,9 +27,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - default
-      - coolify
 
   ac-server:
     build:
@@ -85,6 +78,3 @@ services:
     depends_on:
       ac-server:
         condition: service_started
-    networks:
-      - default
-      - coolify

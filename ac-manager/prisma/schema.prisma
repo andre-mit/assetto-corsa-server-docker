@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  password    String
+  role        String   @default("VIEWER")
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation("CreatedUsers", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdUsers User[]  @relation("CreatedUsers")
+}
+
+model Track {
+  id          String   @id @default(cuid())
+  folderName  String   @unique
+  name        String
+  pitboxes    Int
+  s3ImageUrl  String?
+  isMod       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Car {
+  id          String   @id @default(cuid())
+  folderName  String   @unique
+  name        String
+  brand       String?
+  s3ImageUrl  String?
+  isMod       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}

@@ -1,0 +1,76 @@
+volumes:
+  ac-shared-config: # Config .ini/.yml — persisted, editable via ac-manager
+  ac-shared-content: # Game content (cars, tracks)
+  ac-sqlserver-data:
+    # SQL Server data (only used when profile 'sqlserver' is active)
+
+services:
+  sqlserver:
+    profiles:
+      - sqlserver
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ac-sqlserver
+    environment:
+      SA_PASSWORD: ${SQLSERVER_SA_PASSWORD}
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - ac-sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -Q 'SELECT 1' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ac-server:
+    build:
+      context: .
+      dockerfile: ac-server/Dockerfile
+    container_name: ac-server-instance
+    environment:
+      - STEAM_USER=${STEAM_USER}
+      - STEAM_PASSWORD=${STEAM_PASSWORD}
+    ports:
+      - "9600:9600/tcp"
+      - "9600:9600/udp"
+      - "8081:8081/tcp"
+      - "20081:20081/udp"
+    volumes:
+      - ac-shared-config:/home/steam/ac-server/cfg
+      - ac-shared-content:/home/steam/ac-server/content
+    restart: unless-stopped
+
+  ac-manager-next:
+    build:
+      context: ./ac-manager
+    container_name: ac-web-manager
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ac-shared-config:/app/cfg
+      - ac-shared-content:/app/game-content
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - HOSTNAME=${WEB_HOSTNAME}
+      - DATABASE_URL=${DATABASE_URL}
+      - MSSQL_HOST=${MSSQL_HOST}
+      - MSSQL_PORT=${MSSQL_PORT}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_PASSWORD=${MSSQL_PASSWORD}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_ENCRYPT=${MSSQL_ENCRYPT}
+      - MSSQL_TRUST_SERVER_CERTIFICATE=${MSSQL_TRUST_SERVER_CERTIFICATE}
+      - JWT_SECRET=${JWT_SECRET}
+      - MASTER_EMAIL=${MASTER_EMAIL}
+      - MASTER_PASSWORD=${MASTER_PASSWORD}
+      - MASTER_NAME=${MASTER_NAME}
+      - CONFIG_DIR=/app/cfg
+    restart: unless-stopped
+    depends_on:
+      ac-server:
+        condition: service_started

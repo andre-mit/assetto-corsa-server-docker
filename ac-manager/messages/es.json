@@ -1,0 +1,131 @@
+{
+  "Auth": {
+    "login": {
+      "subtitle": "Inicia sesión para gestionar tu servidor",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión...",
+      "invalidCredentials": "Correo electrónico o contraseña incorrectos.",
+      "networkError": "Error de red. Comprueba tu conexión."
+    }
+  },
+  "Navigation": {
+    "dashboard": "Panel",
+    "settings": "Configuración",
+    "entryList": "Parrilla y Autos",
+    "content": "Mods (Contenido)",
+    "csp": "Clima (CSP)",
+    "configEditor": "Editor de Configs",
+    "users": "Usuarios"
+  },
+  "Dashboard": {
+    "title": "Panel del Servidor",
+    "status": "Estado del Servidor",
+    "online": "En línea",
+    "offline": "Fuera de línea",
+    "serverOnline": "Servidor en línea",
+    "serverOffline": "Servidor fuera de línea",
+    "start": "Iniciar",
+    "stop": "Detener",
+    "restart": "Reiniciar",
+    "connectionLost": "Conexión perdida. Reintentando...",
+    "waitingLogs": "Esperando los logs del servidor..."
+  },
+  "Common": {
+    "checking": "Verificando...",
+    "logout": "Cerrar sesión",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito"
+  },
+  "Settings": {
+    "title": "Configuración del Servidor",
+    "description": "Gestiona el archivo server_cfg.ini de Assetto Corsa.",
+    "saveChanges": "Guardar Cambios",
+    "saveSuccess": "Configuración guardada. Reinicia el servidor para aplicar.",
+    "loadError": "Error al cargar la configuración.",
+    "tabs": {
+      "general": "General",
+      "network": "Red y Puertos",
+      "rules": "Reglas y Asistencias",
+      "sessions": "Sesiones"
+    },
+    "general": {
+      "title": "Información Básica",
+      "description": "Cómo aparecerá tu servidor en el lobby.",
+      "serverName": "Nombre del Servidor",
+      "password": "Contraseña (dejar en blanco para público)",
+      "adminPassword": "Contraseña de Admin",
+      "maxPlayers": "Máximo de Jugadores"
+    },
+    "network": {
+      "title": "Configuración de Red",
+      "description": "Si cambias los puertos aquí, deberás actualizar docker-compose.yml.",
+      "udpPort": "Puerto UDP",
+      "tcpPort": "Puerto TCP",
+      "httpPort": "Puerto HTTP"
+    },
+    "rules": {
+      "title": "Asistencias de Conducción",
+      "description": "Define qué está permitido en tu servidor.",
+      "abs": "Permitir ABS",
+      "absDesc": "Sistema antibloqueo de frenos.",
+      "tc": "Permitir Control de Tracción (TC)",
+      "tcDesc": "Evita el patinaje al salir de las curvas.",
+      "tyreBlankets": "Mantas térmicas para neumáticos",
+      "tyreBranketsDesc": "Los neumáticos salen precalentados del pit."
+    },
+    "sessions": {
+      "title": "Duración de las Sesiones",
+      "description": "Ajusta los tiempos de práctica, clasificación y carrera.",
+      "practice": "Práctica",
+      "qualifying": "Clasificación",
+      "race": "Carrera",
+      "timeMinutes": "Tiempo (Minutos)",
+      "totalLaps": "Total de Vueltas",
+      "waitTime": "Tiempo de Espera (Segundos)"
+    }
+  },
+  "ConfigEditor": {
+    "title": "Editor de Archivos de Configuración",
+    "description": "Edita directamente los archivos .ini y .yml compartidos entre el gestor y el servidor AC.",
+    "save": "Guardar Archivo",
+    "reload": "Recargar",
+    "saveSuccess": "Archivo guardado correctamente.",
+    "saveError": "Error al guardar el archivo.",
+    "loadError": "Error al cargar el archivo.",
+    "hint": "Los cambios se aplican después de reiniciar el servidor AC."
+  },
+  "Users": {
+    "title": "Gestión de Usuarios",
+    "description": "Añade y gestiona los usuarios que pueden acceder al AC Manager.",
+    "addUser": "Añadir Usuario",
+    "newUser": "Nuevo Usuario",
+    "newUserDescription": "Crea una nueva cuenta para acceder al gestor.",
+    "name": "Nombre Completo",
+    "email": "Correo electrónico",
+    "password": "Contraseña (mín. 8 caracteres)",
+    "role": "Rol",
+    "createUser": "Crear Usuario",
+    "createSuccess": "Usuario creado correctamente.",
+    "createError": "Error al crear el usuario.",
+    "userList": "Lista de Usuarios",
+    "totalUsers": "usuarios registrados",
+    "createdBy": "Creado por",
+    "removeUser": "Eliminar usuario",
+    "roles": {
+      "MASTER": "Master",
+      "ADMIN": "Administrador",
+      "VIEWER": "Observador"
+    }
+  },
+  "Errors": {
+    "notFound": "Página no encontrada.",
+    "unauthorized": "Debes iniciar sesión para acceder a esta página.",
+    "forbidden": "No tienes permiso para acceder a este recurso.",
+    "serverError": "Ocurrió un error interno. Inténtalo de nuevo."
+  }
+}

@@ -1,0 +1,53 @@
+import fs from 'fs/promises';
+import path from 'path';
+import ini from 'ini';
+import { AcEntryList } from '@/types/ac-server';
+
+const CONFIG_DIR = process.env.CONFIG_DIR || path.join(process.cwd(), '/shared-config');
+
+export async function readConfig(fileName: 'server_cfg.ini' | 'entry_list.ini') {
+  try {
+    const filePath = path.join(CONFIG_DIR, fileName);
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    return ini.parse(fileContent);
+  } catch (error) {
+    console.error(`Error reading ${fileName}:`, error);
+    return null;
+  }
+}
+
+export async function writeConfig(fileName: 'server_cfg.ini' | 'entry_list.ini', data: any) {
+  const filePath = path.join(CONFIG_DIR, fileName);
+  const iniContent = ini.stringify(data);
+  await fs.writeFile(filePath, iniContent, 'utf-8');
+}
+
+export async function generateEntryList(selectedCars: string[], maxClients: number) {
+  if (!selectedCars || selectedCars.length === 0) {
+    throw new Error('At least one car is required to generate the entry list.');
+  }
+
+  const entryList: AcEntryList = {};
+
+  for (let i = 0; i < maxClients; i++) {
+    const carModel = selectedCars[i % selectedCars.length];
+
+    entryList[`CAR_${i}`] = {
+      MODEL: carModel,
+      SKIN: '',
+      SPECTATOR_MODE: 0,
+      DRIVERNAME: '',
+      TEAM: '',
+      GUID: '',
+      BALLAST: 0,
+      RESTRICTOR: 0
+    };
+  }
+
+  const iniContent = ini.stringify(entryList);
+
+  const filePath = path.join(CONFIG_DIR, 'entry_list.ini');
+  await fs.writeFile(filePath, iniContent, 'utf-8');
+
+  return entryList;
+}

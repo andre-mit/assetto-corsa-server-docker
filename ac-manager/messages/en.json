@@ -1,0 +1,131 @@
+{
+  "Auth": {
+    "login": {
+      "subtitle": "Sign in to manage your server",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "invalidCredentials": "Invalid email or password.",
+      "networkError": "Network error. Check your connection."
+    }
+  },
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "entryList": "Grid & Cars",
+    "content": "Mods (Content)",
+    "csp": "Weather (CSP)",
+    "configEditor": "Config Editor",
+    "users": "Users"
+  },
+  "Dashboard": {
+    "title": "Server Dashboard",
+    "status": "Server Status",
+    "online": "Online",
+    "offline": "Offline",
+    "serverOnline": "Server Online",
+    "serverOffline": "Server Offline",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "connectionLost": "Connection lost. Retrying...",
+    "waitingLogs": "Waiting for server logs..."
+  },
+  "Common": {
+    "checking": "Checking...",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "Settings": {
+    "title": "Server Settings",
+    "description": "Manage the Assetto Corsa server_cfg.ini file.",
+    "saveChanges": "Save Changes",
+    "saveSuccess": "Settings saved. Restart the server to apply.",
+    "loadError": "Error loading settings.",
+    "tabs": {
+      "general": "General",
+      "network": "Network & Ports",
+      "rules": "Rules & Assists",
+      "sessions": "Sessions"
+    },
+    "general": {
+      "title": "Basic Information",
+      "description": "How your server will appear in the lobby.",
+      "serverName": "Server Name",
+      "password": "Password (leave blank for public)",
+      "adminPassword": "Admin Password",
+      "maxPlayers": "Max Players"
+    },
+    "network": {
+      "title": "Network Settings",
+      "description": "If you change ports here, you must also update docker-compose.yml.",
+      "udpPort": "UDP Port",
+      "tcpPort": "TCP Port",
+      "httpPort": "HTTP Port"
+    },
+    "rules": {
+      "title": "Driving Assists",
+      "description": "Define what is allowed on your server.",
+      "abs": "Allow ABS",
+      "absDesc": "Anti-lock braking system.",
+      "tc": "Allow Traction Control (TC)",
+      "tcDesc": "Prevents wheel spin when exiting corners.",
+      "tyreBlankets": "Tyre Blankets",
+      "tyreBranketsDesc": "Tyres start pre-heated from the pits."
+    },
+    "sessions": {
+      "title": "Session Duration",
+      "description": "Set the duration of practice, qualifying and race sessions.",
+      "practice": "Practice",
+      "qualifying": "Qualifying",
+      "race": "Race",
+      "timeMinutes": "Time (Minutes)",
+      "totalLaps": "Total Laps",
+      "waitTime": "Wait Time (Seconds)"
+    }
+  },
+  "ConfigEditor": {
+    "title": "Config File Editor",
+    "description": "Directly edit .ini and .yml configuration files shared between the manager and the AC server.",
+    "save": "Save File",
+    "reload": "Reload",
+    "saveSuccess": "File saved successfully.",
+    "saveError": "Failed to save file.",
+    "loadError": "Failed to load file.",
+    "hint": "Changes take effect after restarting the AC server."
+  },
+  "Users": {
+    "title": "User Management",
+    "description": "Add and manage users who can access the AC Manager.",
+    "addUser": "Add User",
+    "newUser": "New User",
+    "newUserDescription": "Create a new account to access the manager.",
+    "name": "Full Name",
+    "email": "Email",
+    "password": "Password (min. 8 characters)",
+    "role": "Role",
+    "createUser": "Create User",
+    "createSuccess": "User created successfully.",
+    "createError": "Failed to create user.",
+    "userList": "User List",
+    "totalUsers": "users registered",
+    "createdBy": "Created by",
+    "removeUser": "Remove user",
+    "roles": {
+      "MASTER": "Master",
+      "ADMIN": "Admin",
+      "VIEWER": "Viewer"
+    }
+  },
+  "Errors": {
+    "notFound": "Page not found.",
+    "unauthorized": "You need to sign in to access this page.",
+    "forbidden": "You do not have permission to access this resource.",
+    "serverError": "An internal error occurred. Please try again."
+  }
+}

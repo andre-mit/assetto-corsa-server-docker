@@ -19,11 +19,11 @@ export default function EntryListPage() {
   const [config, setConfig] = useState<AcServerConfig | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
-  
+
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [selectedCars, setSelectedCars] = useState<string[]>([]);
   const [maxClients, setMaxClients] = useState(10);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -35,11 +35,11 @@ export default function EntryListPage() {
     ]).then(([configData, tracksData, carsData]) => {
       setTracks(tracksData);
       setCars(carsData);
-      
+
       if (configData.serverCfg) {
         setConfig(configData.serverCfg);
         setMaxClients(parseInt(configData.serverCfg.SERVER.MAX_CLIENTS) || 10);
-        
+
         const currentCars = configData.serverCfg.SERVER.CARS.split(';').filter(Boolean);
         setSelectedCars(currentCars);
 
@@ -52,9 +52,9 @@ export default function EntryListPage() {
   }, []);
 
   const toggleCarSelection = (folderName: string) => {
-    setSelectedCars(prev => 
-      prev.includes(folderName) 
-        ? prev.filter(c => c !== folderName) 
+    setSelectedCars(prev =>
+      prev.includes(folderName)
+        ? prev.filter(c => c !== folderName)
         : [...prev, folderName]
     );
   };
@@ -65,11 +65,11 @@ export default function EntryListPage() {
     if (maxClients > selectedTrack.pitboxes) return toast.error(t("maxClientsError", { max: selectedTrack.pitboxes }));
 
     setIsSaving(true);
-    
+
     const updatedConfig = {
       ...config,
       SERVER: {
-        ...config.SERVER,
+        ...config?.SERVER,
         TRACK: selectedTrack.folderName,
         CARS: selectedCars.join(';'),
         MAX_CLIENTS: maxClients
@@ -82,7 +82,7 @@ export default function EntryListPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serverCfg: updatedConfig }),
       });
-      
+
       if (res.ok) toast.success(t("saveSuccess"));
     } catch (error) {
       console.error(error);
@@ -113,8 +113,8 @@ export default function EntryListPage() {
               <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> {t("circuit")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select 
-                value={selectedTrack?.folderName || ""} 
+              <Select
+                value={selectedTrack?.folderName || ""}
                 onValueChange={(val) => {
                   const t = tracks.find(track => track.folderName === val) || null;
                   setSelectedTrack(t);
@@ -137,11 +137,11 @@ export default function EntryListPage() {
                 <div className="mt-4 space-y-3">
                   <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted relative">
                     {selectedTrack.s3ImageUrl ? (
-                      <Image 
-                        src={selectedTrack.s3ImageUrl} 
-                        alt={selectedTrack.name} 
-                        fill 
-                        className="object-cover" 
+                      <Image
+                        src={selectedTrack.s3ImageUrl}
+                        alt={selectedTrack.name}
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground">{t("noImage")}</div>
@@ -163,9 +163,9 @@ export default function EntryListPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Input 
-                  type="number" 
-                  min={1} 
+                <Input
+                  type="number"
+                  min={1}
                   max={selectedTrack ? selectedTrack.pitboxes : 100}
                   value={maxClients}
                   onChange={(e) => setMaxClients(parseInt(e.target.value) || 1)}
@@ -191,20 +191,19 @@ export default function EntryListPage() {
                 {cars.map((car) => {
                   const isSelected = selectedCars.includes(car.folderName);
                   return (
-                    <div 
-                      key={car.id} 
+                    <div
+                      key={car.id}
                       onClick={() => toggleCarSelection(car.folderName)}
-                      className={`relative cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${
-                        isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-border"
-                      }`}
+                      className={`relative cursor-pointer overflow-hidden rounded-lg border-2 transition-all ${isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-border"
+                        }`}
                     >
                       <div className="aspect-video w-full bg-muted relative">
-                         {car.s3ImageUrl ? (
-                          <Image 
-                            src={car.s3ImageUrl} 
-                            alt={car.name} 
-                            fill 
-                            className="object-cover" 
+                        {car.s3ImageUrl ? (
+                          <Image
+                            src={car.s3ImageUrl}
+                            alt={car.name}
+                            fill
+                            className="object-cover"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-muted-foreground">{t("noImage")}</div>

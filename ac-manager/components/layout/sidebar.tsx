@@ -15,11 +15,19 @@ import {
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
+
+const ROLE_COLORS: Record<string, string> = {
+  MASTER: "text-yellow-500",
+  ADMIN: "text-blue-500",
+  VIEWER: "text-zinc-500",
+};
 
 export function Sidebar() {
   const t = useTranslations("Navigation");
   const locale = useLocale();
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const navItems = [
     { key: "dashboard", href: `/${locale}/dashboard`, icon: Home },
@@ -58,6 +66,17 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {user && (
+        <div className="p-4 border-t bg-accent/5">
+          <div className="flex flex-col px-2">
+            <span className="text-sm font-semibold truncate">{user.name}</span>
+            <span className={cn("text-[10px] font-bold tracking-widest uppercase", ROLE_COLORS[user.role.toUpperCase()] || "text-muted-foreground")}>
+              {user.role}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t flex items-center justify-center gap-3">
         <LanguageSwitcher />

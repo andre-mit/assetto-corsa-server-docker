@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 interface UserEntry {
   id: string;
@@ -48,10 +49,10 @@ const ROLE_BADGE: Record<string, string> = {
 
 export default function UsersPage() {
   const t = useTranslations("Users");
+  const { user: authUser, isLoading: isLoadingAuth } = useAuth();
 
   const [users, setUsers] = useState<UserEntry[]>([]);
-  const [authUser, setAuthUser] = useState<UserEntry | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,24 +61,20 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"MASTER" | "ADMIN" | "VIEWER">("VIEWER");
 
-  useEffect(() => {
-    async function fetchUsers() {
-      setIsLoading(true);
-      try {
-        const [usersRes, meRes] = await Promise.all([
-          fetch("/api/auth/users"),
-          fetch("/api/auth/me"),
-        ]);
-        const { users: list } = await usersRes.json();
-        const { user: me } = await meRes.json();
-        console.log("list:" + JSON.stringify(list));
-        console.log("me:" + JSON.stringify(me));
-        setUsers(list || []);
-        setAuthUser(me || null);
-      } finally {
-        setIsLoading(false);
-      }
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch("/api/auth/users");
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error("[UsersPage] Failed to fetch users:", error);
+    } finally {
+      setIsLoadingUsers(false);
     }
+  };
+
+  useEffect(() => {
     fetchUsers();
   }, []);
 
@@ -108,6 +105,7 @@ export default function UsersPage() {
       setNewName("");
       setNewPassword("");
       setNewRole("VIEWER");
+      fetchUsers();
     } catch {
       toast.error(t("createError"));
     } finally {
@@ -115,10 +113,10 @@ export default function UsersPage() {
     }
   };
 
-  const availableRoles =
-    authUser?.role === "MASTER" ? ["ADMIN", "VIEWER"] : ["VIEWER"];
+  const availableRoles = 
+    authUser?.role?.toUpperCase() === "MASTER" ? ["ADMIN", "VIEWER"] : ["VIEWER"];
 
-  if (isLoading) {
+  if (isLoadingAuth || isLoadingUsers) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -184,7 +182,7 @@ export default function UsersPage() {
                 <Label htmlFor="new-role">{t("role")}</Label>
                 <Select
                   value={newRole}
-                  onValueChange={(v) => setNewRole(v as "ADMIN" | "VIEWER")}
+                  onValueChange={(v) => setNewRole(v as "MASTER" | "ADMIN" | "VIEWER")}
                 >
                   <SelectTrigger id="new-role">
                     <SelectValue />
@@ -241,7 +239,7 @@ export default function UsersPage() {
                   >
                     {u.role}
                   </span>
-                  {u.role !== "MASTER" && authUser?.role === "MASTER" && (
+                  {u.role !== "MASTER" && authUser?.role?.toUpperCase() === "MASTER" && (
                     <button
                       className="text-muted-foreground hover:text-destructive transition-colors"
                       title={t("removeUser")}

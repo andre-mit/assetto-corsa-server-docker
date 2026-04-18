@@ -4,33 +4,36 @@
       "subtitle": "Inicia sesión para gestionar tu servidor",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "signIn": "Iniciar sesión",
-      "signingIn": "Iniciando sesión...",
-      "invalidCredentials": "Correo electrónico o contraseña incorrectos.",
+      "signIn": "Entrar",
+      "signingIn": "Entrando...",
+      "invalidCredentials": "Correo o contraseña inválidos.",
       "networkError": "Error de red. Comprueba tu conexión."
     }
   },
   "Navigation": {
-    "dashboard": "Panel",
+    "dashboard": "Dashboard",
     "settings": "Configuración",
-    "entryList": "Parrilla y Autos",
+    "entryList": "Grid y Coches",
     "content": "Mods (Contenido)",
     "csp": "Clima (CSP)",
     "configEditor": "Editor de Configs",
     "users": "Usuarios"
   },
   "Dashboard": {
-    "title": "Panel del Servidor",
+    "title": "Dashboard del Servidor",
     "status": "Estado del Servidor",
     "online": "En línea",
-    "offline": "Fuera de línea",
+    "offline": "Desconectado",
     "serverOnline": "Servidor en línea",
-    "serverOffline": "Servidor fuera de línea",
+    "serverOffline": "Servidor desconectado",
+    "status_running": "Ejecutando",
+    "status_stopped": "Detenido",
+    "status_starting": "Iniciando...",
     "start": "Iniciar",
     "stop": "Detener",
     "restart": "Reiniciar",
-    "connectionLost": "Conexión perdida. Reintentando...",
-    "waitingLogs": "Esperando los logs del servidor..."
+    "connectionLost": "Conexión perdida. Reconectando...",
+    "waitingLogs": "Esperando logs do servidor..."
   },
   "Common": {
     "checking": "Verificando...",
@@ -50,7 +53,7 @@
     "tabs": {
       "general": "General",
       "network": "Red y Puertos",
-      "rules": "Reglas y Asistencias",
+      "rules": "Reglas y Ayudas",
       "sessions": "Sesiones"
     },
     "general": {
@@ -69,14 +72,14 @@
       "httpPort": "Puerto HTTP"
     },
     "rules": {
-      "title": "Asistencias de Conducción",
+      "title": "Ayudas de Conducción",
       "description": "Define qué está permitido en tu servidor.",
       "abs": "Permitir ABS",
       "absDesc": "Sistema antibloqueo de frenos.",
       "tc": "Permitir Control de Tracción (TC)",
-      "tcDesc": "Evita el patinaje al salir de las curvas.",
-      "tyreBlankets": "Mantas térmicas para neumáticos",
-      "tyreBranketsDesc": "Los neumáticos salen precalentados del pit."
+      "tcDesc": "Evita el deslizamiento de las ruedas al salir de las curvas.",
+      "tyreBlankets": "Calentadores de Neumáticos",
+      "tyreBranketsDesc": "Los neumáticos salen precalentados de boxes."
     },
     "sessions": {
       "title": "Duración de las Sesiones",
@@ -85,7 +88,7 @@
       "qualifying": "Clasificación",
       "race": "Carrera",
       "timeMinutes": "Tiempo (Minutos)",
-      "totalLaps": "Total de Vueltas",
+      "totalLaps": "Vueltas Totales",
       "waitTime": "Tiempo de Espera (Segundos)"
     }
   },
@@ -94,10 +97,10 @@
     "description": "Edita directamente los archivos .ini y .yml compartidos entre el gestor y el servidor AC.",
     "save": "Guardar Archivo",
     "reload": "Recargar",
-    "saveSuccess": "Archivo guardado correctamente.",
+    "saveSuccess": "Archivo guardado con éxito.",
     "saveError": "Error al guardar el archivo.",
     "loadError": "Error al cargar el archivo.",
-    "hint": "Los cambios se aplican después de reiniciar el servidor AC."
+    "hint": "Los cambios surten efecto tras reiniciar el servidor AC."
   },
   "Users": {
     "title": "Gestión de Usuarios",
@@ -110,7 +113,7 @@
     "password": "Contraseña (mín. 8 caracteres)",
     "role": "Rol",
     "createUser": "Crear Usuario",
-    "createSuccess": "Usuario creado correctamente.",
+    "createSuccess": "Usuario creado con éxito.",
     "createError": "Error al crear el usuario.",
     "userList": "Lista de Usuarios",
     "totalUsers": "usuarios registrados",
@@ -119,7 +122,7 @@
     "roles": {
       "MASTER": "Master",
       "ADMIN": "Administrador",
-      "VIEWER": "Observador"
+      "VIEWER": "Espectador"
     }
   },
   "Errors": {
@@ -127,5 +130,51 @@
     "unauthorized": "Debes iniciar sesión para acceder a esta página.",
     "forbidden": "No tienes permiso para acceder a este recurso.",
     "serverError": "Ocurrió un error interno. Inténtalo de nuevo."
+  },
+  "Content": {
+    "title": "Gestor de Contenido",
+    "description": "Instala nuevos mods (Coches o Pistas) o visualiza o conteúdo existente.",
+    "syncBase": "Sincronizar Contenido Base",
+    "syncSuccess": "¡Contenido sincronizado con éxito!",
+    "installZip": "Arrastra um ficheiro .ZIP",
+    "installZipDetail": "O haz clic para buscar (.zip)",
+    "installUrl": "Instalar mediante Link Directo",
+    "installUrlDetail": "Pega el enlace directo (.zip) para que el servidor lo descargue.",
+    "installUrlHint": "Solo enlaces de descarga directa. Sitios como Mediafire podem fallar.",
+    "urlPlaceholder": "https://ejemplo.com/mod.zip",
+    "download": "Descargar",
+    "uploading": "Subiendo/Descargando...",
+    "processing": "Procesando...",
+    "success": "¡Éxito!",
+    "installError": "Error en la Instalación",
+    "tryAgain": "Intentar de nuevo",
+    "transferring": "Transfiriendo archivo al servidor...",
+    "extracting": "Extrayendo, analizando archivos y sincronizando. Esto puede tardar unos minutos...",
+    "connError": "Fallo en la conexión con el servidor.",
+    "noCars": "No se encontraron coches.",
+    "noTracks": "No se encontraron pistas.",
+    "cars": "Coches",
+    "tracks": "Pistas",
+    "mod": "Mod",
+    "pits": "Pits"
+  },
+  "EntryList": {
+    "title": "Configuración del Grid",
+    "description": "Elige el lugar y las máquinas para la próxima sesión.",
+    "saveGrid": "Guardar Grid",
+    "selectTrack": "Seleccionar pista",
+    "selectTrackError": "¡Selecciona uma pista!",
+    "selectCarError": "¡Selecciona al menos un coche!",
+    "maxClientsError": "La pista soporta um máximo de {max} plazas.",
+    "saveSuccess": "¡Grid actualizado! Los pitboxes se generaron y distribuíram con éxito.",
+    "circuit": "Circuito",
+    "maxCapacity": "Capacidad Máxima:",
+    "gridSize": "Tamaño del Grid",
+    "gridSizeDesc": "Cuántos pilotos podrán entrar en el servidor.",
+    "gridSizeLimitError": "¡El valor excede el límite de la pista seleccionada!",
+    "carRoster": "Roster de Coches",
+    "carRosterDesc": "Selecciona los vehículos permitidos. El sistema distribuirá las {max} plazas entre los coches seleccionados de forma igual.",
+    "noCars": "¡No hay coches registrados en la base de datos. Instala mods primero!",
+    "noImage": "Sin Imagen"
   }
 }

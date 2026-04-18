@@ -1,9 +1,20 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 
+const s3Url = process.env.S3_PUBLIC_URL ? new URL(process.env.S3_PUBLIC_URL) : null;
+
 const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
+  images: {
+    remotePatterns: s3Url ? [
+      {
+        protocol: s3Url.protocol.replace(':', '') as 'http' | 'https',
+        hostname: s3Url.hostname,
+        pathname: '/**',
+      },
+    ] : [],
+  },
 };
 
 const withNextIntl = createNextIntlPlugin();

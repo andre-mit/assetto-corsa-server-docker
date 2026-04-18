@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Save, Loader2, MapPin, Users, Car as CarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AcServerConfig, Track, Car } from "@/types/ac-server";
 
 export default function EntryListPage() {
+  const t = useTranslations("EntryList");
   const [config, setConfig] = useState<AcServerConfig | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
@@ -56,9 +60,9 @@ export default function EntryListPage() {
   };
 
   const handleSave = async () => {
-    if (!selectedTrack) return alert("Selecione uma pista!");
-    if (selectedCars.length === 0) return alert("Selecione pelo menos um carro!");
-    if (maxClients > selectedTrack.pitboxes) return alert(`A pista suporta no máximo ${selectedTrack.pitboxes} vagas.`);
+    if (!selectedTrack) return toast.error(t("selectTrackError"));
+    if (selectedCars.length === 0) return toast.error(t("selectCarError"));
+    if (maxClients > selectedTrack.pitboxes) return toast.error(t("maxClientsError", { max: selectedTrack.pitboxes }));
 
     setIsSaving(true);
     
@@ -79,7 +83,7 @@ export default function EntryListPage() {
         body: JSON.stringify({ serverCfg: updatedConfig }),
       });
       
-      if (res.ok) alert("Grid atualizado! Os pitboxes foram gerados e distribuídos com sucesso.");
+      if (res.ok) toast.success(t("saveSuccess"));
     } catch (error) {
       console.error(error);
     } finally {
@@ -93,12 +97,12 @@ export default function EntryListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Setup do Grid</h2>
-          <p className="text-muted-foreground">Escolha o local e as máquinas para a próxima sessão.</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("title")}</h2>
+          <p className="text-muted-foreground">{t("description")}</p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="gap-2">
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar Grid
+          {t("saveGrid")}
         </Button>
       </div>
 
@@ -106,7 +110,7 @@ export default function EntryListPage() {
         <div className="space-y-6 lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Circuito</CardTitle>
+              <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> {t("circuit")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Select 
@@ -118,7 +122,7 @@ export default function EntryListPage() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a pista" />
+                  <SelectValue placeholder={t("selectTrack")} />
                 </SelectTrigger>
                 <SelectContent>
                   {tracks.map(track => (
@@ -131,15 +135,20 @@ export default function EntryListPage() {
 
               {selectedTrack && (
                 <div className="mt-4 space-y-3">
-                  <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted">
+                  <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted relative">
                     {selectedTrack.s3ImageUrl ? (
-                      <img src={selectedTrack.s3ImageUrl} alt={selectedTrack.name} className="h-full w-full object-cover" />
+                      <Image 
+                        src={selectedTrack.s3ImageUrl} 
+                        alt={selectedTrack.name} 
+                        fill 
+                        className="object-cover" 
+                      />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-muted-foreground">Sem Imagem</div>
+                      <div className="flex h-full items-center justify-center text-muted-foreground">{t("noImage")}</div>
                     )}
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Capacidade Máxima:</span>
+                    <span className="text-muted-foreground">{t("maxCapacity")}</span>
                     <Badge variant="secondary">{selectedTrack.pitboxes} Pitboxes</Badge>
                   </div>
                 </div>
@@ -149,8 +158,8 @@ export default function EntryListPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Tamanho do Grid</CardTitle>
-              <CardDescription>Quantos pilotos poderão entrar no servidor.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> {t("gridSize")}</CardTitle>
+              <CardDescription>{t("gridSizeDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -162,7 +171,7 @@ export default function EntryListPage() {
                   onChange={(e) => setMaxClients(parseInt(e.target.value) || 1)}
                 />
                 {selectedTrack && maxClients > selectedTrack.pitboxes && (
-                  <p className="text-xs text-red-500">Valor excede o limite da pista selecionada!</p>
+                  <p className="text-xs text-red-500">{t("gridSizeLimitError")}</p>
                 )}
               </div>
             </CardContent>
@@ -172,9 +181,9 @@ export default function EntryListPage() {
         <div className="lg:col-span-2">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><CarIcon className="h-5 w-5" /> Roster de Carros</CardTitle>
+              <CardTitle className="flex items-center gap-2"><CarIcon className="h-5 w-5" /> {t("carRoster")}</CardTitle>
               <CardDescription>
-                Selecione os veículos permitidos. O sistema distribuirá as {maxClients} vagas entre os carros selecionados de forma igual.
+                {t("carRosterDesc", { max: maxClients })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -189,11 +198,16 @@ export default function EntryListPage() {
                         isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-border"
                       }`}
                     >
-                      <div className="aspect-video w-full bg-muted">
+                      <div className="aspect-video w-full bg-muted relative">
                          {car.s3ImageUrl ? (
-                          <img src={car.s3ImageUrl} alt={car.name} className="h-full w-full object-cover" />
+                          <Image 
+                            src={car.s3ImageUrl} 
+                            alt={car.name} 
+                            fill 
+                            className="object-cover" 
+                          />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-muted-foreground">Sem Imagem</div>
+                          <div className="flex h-full items-center justify-center text-muted-foreground">{t("noImage")}</div>
                         )}
                       </div>
                       <div className="bg-card p-3 flex items-start justify-between">
@@ -209,7 +223,7 @@ export default function EntryListPage() {
               </div>
               {cars.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                  Nenhum carro cadastrado no banco de dados. Instale mods primeiro!
+                  {t("noCars")}
                 </div>
               )}
             </CardContent>

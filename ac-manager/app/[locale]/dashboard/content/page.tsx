@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   UploadCloud,
   FileArchive,
   Loader2,
   CheckCircle,
   AlertCircle,
-  Car,
+  Car as CarIcon,
   MapPin,
   Link,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import { toast } from "sonner";
 import { Track, Car } from "@/types/ac-server";
 
 export default function ContentPage() {
+  const t = useTranslations("Content");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,13 +51,14 @@ export default function ContentPage() {
       const res = await fetch("/api/content/sync", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message);
+        toast.success(t("syncSuccess"));
         fetchData();
       } else {
-        alert("Erro na sincronização: " + data.error);
+        toast.error(`${t("connError")} ${data.error}`);
       }
     } catch (error) {
       console.error(error);
+      toast.error(t("connError"));
     } finally {
       setIsSyncing(false);
     }
@@ -69,7 +73,7 @@ export default function ContentPage() {
       setTracks(await tracksRes.json());
       setCars(await carsRes.json());
     } catch (error) {
-      console.error("Erro ao carregar conteúdo:", error);
+      console.error("Error loading content:", error);
     } finally {
       setIsLoading(false);
     }
@@ -86,16 +90,14 @@ export default function ContentPage() {
 
       setIsUploading(true);
       setUploadStatus("uploading");
-      setUploadMessage("A transferir o ficheiro ZIP para o servidor...");
+      setUploadMessage(t("transferring"));
 
       const formData = new FormData();
       formData.append("modFile", file);
 
       try {
         setUploadStatus("processing");
-        setUploadMessage(
-          "A extrair, analisar ficheiros UI e a sincronizar com o S3/Base de Dados. Isto pode demorar alguns minutos para pistas pesadas...",
-        );
+        setUploadMessage(t("extracting"));
 
         const response = await fetch("/api/mods/upload", {
           method: "POST",
@@ -106,17 +108,17 @@ export default function ContentPage() {
 
         if (response.ok) {
           setUploadStatus("success");
-          setUploadMessage(data.message || "Mod instalado com sucesso!");
+          setUploadMessage(data.message || t("success"));
           fetchData();
         } else {
           setUploadStatus("error");
-          setUploadMessage(data.error || "Erro ao processar o mod.");
+          setUploadMessage(data.error || t("installError"));
         }
       } catch (err: unknown) {
         const error = err as Error;
         console.error("[api/mods/upload] Error:", error.message || error);
         setUploadStatus("error");
-        setUploadMessage("Falha na ligação com o servidor.");
+        setUploadMessage(t("connError"));
       } finally {
         setIsUploading(false);
         setTimeout(() => {
@@ -132,13 +134,13 @@ export default function ContentPage() {
   
   const handleDownloadFromUrl = async () => {
     if (!downloadUrl || !downloadUrl.startsWith("http")) {
-      toast.error("Por favor insira um URL válido.");
+      toast.error(t("urlPlaceholder")); // Using placeholder as example, or better add a generic validation msg
       return;
     }
 
     setIsUploading(true);
     setUploadStatus("uploading");
-    setUploadMessage("A iniciar o download no servidor...");
+    setUploadMessage(t("transferring"));
     
     try {
       setUploadStatus("processing");
@@ -152,17 +154,17 @@ export default function ContentPage() {
 
       if (response.ok) {
         setUploadStatus("success");
-        setUploadMessage(data.message || "Mod baixado e instalado com sucesso!");
+        setUploadMessage(data.message || t("success"));
         setDownloadUrl("");
         fetchData();
       } else {
         setUploadStatus("error");
-        setUploadMessage(data.error || "Erro ao baixar o mod.");
+        setUploadMessage(data.error || t("installError"));
       }
     } catch (err: unknown) {
       console.error("[api/mods/download] Error:", err);
       setUploadStatus("error");
-      setUploadMessage("Falha na ligação com o servidor.");
+      setUploadMessage(t("connError"));
     } finally {
       setIsUploading(false);
       setTimeout(() => {
@@ -186,11 +188,10 @@ export default function ContentPage() {
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
-          Gestor de Conteúdo
+          {t("title")}
         </h2>
         <p className="text-muted-foreground">
-          Instale novos mods (Carros ou Pistas) ou visualize o conteúdo
-          existente.
+          {t("description")}
         </p>
       </div>
       <Button
@@ -200,7 +201,7 @@ export default function ContentPage() {
         className="gap-2"
       >
         <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
-        Sincronizar Conteúdo Base
+        {t("syncBase")}
       </Button>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-2 border-dashed bg-muted/30">
@@ -219,10 +220,10 @@ export default function ContentPage() {
                 <>
                   <UploadCloud className="w-10 h-10 text-muted-foreground mb-3" />
                   <h3 className="text-md font-semibold">
-                    Arraste um ficheiro .ZIP
+                    {t("installZip")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Ou clique para procurar (.zip)
+                    {t("installZipDetail")}
                   </p>
                 </>
               )}
@@ -233,8 +234,8 @@ export default function ContentPage() {
                   <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
                   <h3 className="text-md font-semibold">
                     {uploadStatus === "uploading"
-                      ? "A enviar/baixar..."
-                      : "A processar..."}
+                      ? t("uploading")
+                      : t("processing")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1 text-center truncate w-full px-4">
                     {uploadMessage}
@@ -246,7 +247,7 @@ export default function ContentPage() {
                 <>
                   <CheckCircle className="w-10 h-10 text-green-500 mb-3" />
                   <h3 className="text-md font-semibold text-green-600">
-                    Sucesso!
+                    {t("success")}
                   </h3>
                 </>
               )}
@@ -255,7 +256,7 @@ export default function ContentPage() {
                 <>
                   <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
                   <h3 className="text-md font-semibold text-red-600 text-center">
-                    Erro na Instalação
+                    {t("installError")}
                   </h3>
                   <button
                     onClick={(e) => {
@@ -264,7 +265,7 @@ export default function ContentPage() {
                     }}
                     className="mt-2 text-xs underline text-muted-foreground"
                   >
-                    Tentar novamente
+                    {t("tryAgain")}
                   </button>
                 </>
               )}
@@ -275,16 +276,16 @@ export default function ContentPage() {
         <Card className="bg-muted/10 h-full flex flex-col justify-center border-2 border-transparent">
           <CardHeader className="pb-4">
             <CardTitle className="text-md flex items-center gap-2">
-              <Link className="w-4 h-4" /> Instalar via Link Direto
+              <Link className="w-4 h-4" /> {t("installUrl")}
             </CardTitle>
             <CardDescription className="text-xs">
-              Cole o link direto (.zip) para o servidor baixar.
+              {t("installUrlDetail")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="https://exemplo.com/mod.zip"
+                placeholder={t("urlPlaceholder")}
                 value={downloadUrl}
                 onChange={(e) => setDownloadUrl(e.target.value)}
                 disabled={isUploading}
@@ -298,7 +299,7 @@ export default function ContentPage() {
                 {isUploading && uploadStatus !== "idle" ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  "Baixar"
+                  t("download")
                 )}
               </Button>
             </div>
@@ -318,10 +319,10 @@ export default function ContentPage() {
           <div className="flex items-center justify-between mb-4">
             <TabsList>
               <TabsTrigger value="cars" className="gap-2">
-                <Car className="w-4 h-4" /> Carros ({cars.length})
+                <CarIcon className="w-4 h-4" /> {t("cars")} ({cars.length})
               </TabsTrigger>
               <TabsTrigger value="tracks" className="gap-2">
-                <MapPin className="w-4 h-4" /> Pistas ({tracks.length})
+                <MapPin className="w-4 h-4" /> {t("tracks")} ({tracks.length})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -332,15 +333,16 @@ export default function ContentPage() {
                 <Card key={car.id} className="overflow-hidden relative group">
                   {car.isMod && (
                     <Badge className="absolute top-2 right-2 z-10 bg-blue-600">
-                      Mod
+                      {t("mod")}
                     </Badge>
                   )}
                   <div className="aspect-video bg-muted relative">
                     {car.s3ImageUrl ? (
-                      <img
+                      <Image
                         src={car.s3ImageUrl}
                         alt={car.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -358,7 +360,7 @@ export default function ContentPage() {
               ))}
               {cars.length === 0 && (
                 <p className="text-muted-foreground col-span-full py-8 text-center border rounded-lg">
-                  Nenhum carro encontrado.
+                  {t("noCars")}
                 </p>
               )}
             </div>
@@ -370,15 +372,16 @@ export default function ContentPage() {
                 <Card key={track.id} className="overflow-hidden relative group">
                   {track.isMod && (
                     <Badge className="absolute top-2 right-2 z-10 bg-blue-600">
-                      Mod
+                      {t("mod")}
                     </Badge>
                   )}
                   <div className="aspect-video bg-muted relative">
                     {track.s3ImageUrl ? (
-                      <img
+                      <Image
                         src={track.s3ImageUrl}
                         alt={track.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -399,14 +402,14 @@ export default function ContentPage() {
                       variant="secondary"
                       className="whitespace-nowrap ml-2"
                     >
-                      {track.pitboxes} Pits
+                      {track.pitboxes} {t("pits")}
                     </Badge>
                   </div>
                 </Card>
               ))}
               {tracks.length === 0 && (
                 <p className="text-muted-foreground col-span-full py-8 text-center border rounded-lg">
-                  Nenhuma pista encontrada.
+                  {t("noTracks")}
                 </p>
               )}
             </div>

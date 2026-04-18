@@ -10,27 +10,33 @@ const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Core API Protection (Basic Session Check)
   if (pathname.startsWith("/api/")) {
-    const isPublicApi = 
-      pathname.startsWith("/api/auth/login") || 
-      pathname.startsWith("/api/auth/logout");
+    // Auth API routes are public (login/logout/me)
+    if (
+      pathname.startsWith("/api/auth/login") ||
+      pathname.startsWith("/api/auth/logout") ||
+      pathname.startsWith("/api/auth/me")
+    ) {
+      return NextResponse.next();
+    }
 
-    if (!isPublicApi) {
-      const token = req.cookies.get(JWT_COOKIE_NAME)?.value;
-      if (!token) {
-        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-      }
-      const payload = await verifyToken(token);
-      if (!payload) {
-        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-      }
+    // All other /api/* require auth
+    const token = req.cookies.get(JWT_COOKIE_NAME)?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+    const payload = await verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
     return NextResponse.next();
   }
 
+  // Handle i18n routing first
   const intlResponse = intlMiddleware(req);
 
+  // Determine if this is a dashboard route (after locale stripping)
+  // e.g. /pt/dashboard, /en/dashboard/settings
   const localeMatch = pathname.match(/^\/([a-z]{2})(\/.*)?$/);
   const pathAfterLocale = localeMatch ? localeMatch[2] || "/" : pathname;
 

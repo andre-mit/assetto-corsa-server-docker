@@ -47,3 +47,12 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
+  trigger-deploy:
+    name: Trigger Coolify
+    needs: build-and-push-web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Coolify Webhook
+        run: |
+          curl -f -v --request GET '${{ secrets.COOLIFY_URL_DEPLOY }}${{ secrets.COOLIFY_AC_SERVER_MANAGER_ID }}&force=true&sha=${{ github.sha }}' \
+              --header 'Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}'

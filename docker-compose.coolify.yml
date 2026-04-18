@@ -48,8 +48,8 @@ services:
       - "8081:8081/tcp"
       - "20081:20081/udp"
     volumes:
-      - ${HOST_CONTENT_PATH}/ac-shared-config:/home/steam/ac-server/cfg
-      - ${HOST_CONTENT_PATH}/ac-shared-content:/home/steam/ac-server/content
+      - "${HOST_CONTENT_PATH:-.}/ac-shared-config:/home/steam/ac-server/cfg"
+      - "${HOST_CONTENT_PATH:-.}/ac-shared-content:/home/steam/ac-server/content"
     restart: unless-stopped
     labels:
       - "app.assetto-corsa.service=ac-server"
@@ -66,8 +66,8 @@ services:
     expose:
       - 3000
     volumes:
-      - ${HOST_CONTENT_PATH}/ac-shared-config:/app/cfg
-      - ${HOST_CONTENT_PATH}/ac-shared-content:/app/game-content
+      - "${HOST_CONTENT_PATH:-.}/ac-shared-config:/app/cfg"
+      - "${HOST_CONTENT_PATH:-.}/ac-shared-content:/app/game-content"
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOSTNAME=${WEB_HOSTNAME}

@@ -10,22 +10,21 @@ const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/users")) {
-    if (
-      pathname.startsWith("/api/auth/login") ||
-      pathname.startsWith("/api/auth/logout") ||
-      pathname.startsWith("/api/auth/me")
-    ) {
-      return NextResponse.next();
-    }
+  // 1. Core API Protection (Basic Session Check)
+  if (pathname.startsWith("/api/")) {
+    const isPublicApi = 
+      pathname.startsWith("/api/auth/login") || 
+      pathname.startsWith("/api/auth/logout");
 
-    const token = req.cookies.get(JWT_COOKIE_NAME)?.value;
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-    const payload = await verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!isPublicApi) {
+      const token = req.cookies.get(JWT_COOKIE_NAME)?.value;
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      }
+      const payload = await verifyToken(token);
+      if (!payload) {
+        return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      }
     }
     return NextResponse.next();
   }

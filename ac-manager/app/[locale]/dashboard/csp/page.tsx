@@ -10,9 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AcCspConfig } from "@/types/ac-server";
 
 export default function CSPPage() {
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<AcCspConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -23,7 +24,11 @@ export default function CSPPage() {
         if (data.cspCfg) setConfig(data.cspCfg);
         setIsLoading(false);
       })
-      .catch((err) => console.error("Erro ao carregar CSP:", err));
+      .catch((err: unknown) => {
+        const error = err as Error;
+        console.error("[api/csp] Erro ao carregar CSP:", error.message || error);
+        setIsLoading(false);
+      });
   }, []);
 
   const handleSave = async () => {
@@ -38,18 +43,26 @@ export default function CSPPage() {
       if (res.ok) {
         alert("Configurações do CSP guardadas! Reinicie o servidor para aplicar a chuva/clima.");
       }
-    } catch (error) {
-      console.error("Erro ao guardar CSP:", error);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("[api/csp] Erro ao guardar CSP:", error.message || error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const updateSectionValue = (section: string, key: string, value: any) => {
-    setConfig((prev: any) => ({
-      ...prev,
-      [section]: { ...prev[section], [key]: value }
-    }));
+  const updateSectionValue = <T extends keyof AcCspConfig, K extends keyof AcCspConfig[T]>(
+    section: T, 
+    key: K, 
+    value: AcCspConfig[T][K]
+  ) => {
+    setConfig((prev: AcCspConfig | null) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        [section]: { ...prev[section], [key]: value }
+      };
+    });
   };
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;

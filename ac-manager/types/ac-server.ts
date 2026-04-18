@@ -10,7 +10,7 @@ export interface AcDynamicTrack {
   SESSION_START: number;
   RANDOMNESS: number;
   SESSION_TRANSFER: number;
-  LAP_GAIN: number;
+  LAP_gain: number;
 }
 
 export interface AcServerConfig {
@@ -32,7 +32,6 @@ export interface AcServerConfig {
     LOCKED_ENTRY_LIST: 0 | 1;
     LOOP_MODE: 0 | 1;
     REGISTER_TO_LOBBY: 0 | 1;
-
     
     TC_ALLOWED: 0 | 1 | 2;
     ABS_ALLOWED: 0 | 1 | 2;
@@ -48,15 +47,64 @@ export interface AcServerConfig {
   DYNAMIC_TRACK?: AcDynamicTrack;
 }
 
+export interface AcCspConfig {
+  PITS: {
+    ALLOW_TO_DRIVE_BACK: boolean;
+    TELEPORT_TO_PITS_ON_WRONG_WAY: boolean;
+  };
+  WEATHER: {
+    ENABLE_DYNAMIC: boolean;
+    SCRIPT: string;
+  };
+  RAIN: {
+    ENABLE: boolean;
+    INTENSITY: number;
+    WETNESS: number;
+  };
+  TIME: {
+    MULTIPLIER: number;
+  };
+}
+
 export interface AcEntryListSlot {
   MODEL: string;
   SKIN?: string;
   SPECTATOR_MODE: 0 | 1;
   DRIVERNAME?: string;
   TEAM?: string;
-  GUID?: string; // SteamID64 player identifier
-  BALLAST: number; // + KG 0-100
-  RESTRICTOR: number; // - % 0-100
+  GUID?: string; 
+  BALLAST: number; 
+  RESTRICTOR: number; 
 }
 
 export type AcEntryList = Record<string, AcEntryListSlot>;
+
+export interface Track {
+  id: string;
+  folderName: string;
+  name: string;
+  pitboxes: number;
+  isMod: boolean;
+  s3ImageUrl: string | null;
+  createdAt: string | Date;
+}
+
+export interface Car {
+  id: string;
+  folderName: string;
+  name: string;
+  brand: string | null;
+  isMod: boolean;
+  s3ImageUrl: string | null;
+  createdAt: string | Date;
+}
+
+export interface CarUIData {
+  name?: string;
+  brand?: string;
+}
+
+export interface TrackUIData {
+  name?: string;
+  pitboxes?: string | number;
+}

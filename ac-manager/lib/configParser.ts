@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import ini from 'ini';
-import { AcEntryList } from '@/types/ac-server';
+import { AcEntryList, AcServerConfig } from '@/types/ac-server';
 
 const CONFIG_DIR = process.env.CONFIG_DIR || path.join(process.cwd(), '/shared-config');
 
@@ -10,13 +10,14 @@ export async function readConfig(fileName: 'server_cfg.ini' | 'entry_list.ini') 
     const filePath = path.join(CONFIG_DIR, fileName);
     const fileContent = await fs.readFile(filePath, 'utf-8');
     return ini.parse(fileContent);
-  } catch (error) {
-    console.error(`Error reading ${fileName}:`, error);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(`Error reading ${fileName}:`, error.message || error);
     return null;
   }
 }
 
-export async function writeConfig(fileName: 'server_cfg.ini' | 'entry_list.ini', data: any) {
+export async function writeConfig(fileName: 'server_cfg.ini' | 'entry_list.ini', data: AcServerConfig | AcEntryList) {
   const filePath = path.join(CONFIG_DIR, fileName);
   const iniContent = ini.stringify(data);
   await fs.writeFile(filePath, iniContent, 'utf-8');

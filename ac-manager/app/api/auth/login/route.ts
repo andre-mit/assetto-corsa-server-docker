@@ -48,9 +48,11 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
+    console.log(`[auth/login] Login successful for: ${email}`);
     return response;
-  } catch (err) {
-    console.error("[auth/login]", err);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[auth/login] Login error:", error.message || error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }

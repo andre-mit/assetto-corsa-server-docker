@@ -7,10 +7,11 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    console.log("Cars retrieved:", cars);
+    console.log(`[api/content/cars] Cars retrieved: ${cars.length} items`);
     return NextResponse.json(cars);
-  } catch (error) {
-    console.error("Error retrieving cars:", error);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[api/content/cars] Error retrieving cars:", error.message || error);
     return NextResponse.json(
       { error: "Failed to retrieve cars" },
       { status: 500 },

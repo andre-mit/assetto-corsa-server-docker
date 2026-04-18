@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Car,
   MapPin,
+  Link,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -24,10 +26,12 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Track, Car } from "@/types/ac-server";
 
 export default function ContentPage() {
-  const [tracks, setTracks] = useState<any[]>([]);
-  const [cars, setCars] = useState<any[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -36,6 +40,7 @@ export default function ContentPage() {
     "idle" | "uploading" | "processing" | "success" | "error"
   >("idle");
   const [uploadMessage, setUploadMessage] = useState("");
+  const [downloadUrl, setDownloadUrl] = useState("");
 
   const handleSyncBaseContent = async () => {
     setIsSyncing(true);
@@ -107,7 +112,9 @@ export default function ContentPage() {
           setUploadStatus("error");
           setUploadMessage(data.error || "Erro ao processar o mod.");
         }
-      } catch (error: any) {
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error("[api/mods/upload] Error:", error.message || error);
         setUploadStatus("error");
         setUploadMessage("Falha na ligação com o servidor.");
       } finally {
@@ -122,6 +129,48 @@ export default function ContentPage() {
     },
     [uploadStatus],
   );
+  
+  const handleDownloadFromUrl = async () => {
+    if (!downloadUrl || !downloadUrl.startsWith("http")) {
+      toast.error("Por favor insira um URL válido.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadStatus("uploading");
+    setUploadMessage("A iniciar o download no servidor...");
+    
+    try {
+      setUploadStatus("processing");
+      const response = await fetch("/api/mods/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: downloadUrl }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUploadStatus("success");
+        setUploadMessage(data.message || "Mod baixado e instalado com sucesso!");
+        setDownloadUrl("");
+        fetchData();
+      } else {
+        setUploadStatus("error");
+        setUploadMessage(data.error || "Erro ao baixar o mod.");
+      }
+    } catch (err: unknown) {
+      console.error("[api/mods/download] Error:", err);
+      setUploadStatus("error");
+      setUploadMessage("Falha na ligação com o servidor.");
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => {
+        setUploadStatus("idle");
+        setUploadMessage("");
+      }, 5000);
+    }
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -153,85 +202,112 @@ export default function ContentPage() {
         <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin" : ""}`} />
         Sincronizar Conteúdo Base
       </Button>
-      <Card className="border-2 border-dashed bg-muted/30">
-        <CardContent className="p-0">
-          <div
-            {...getRootProps()}
-            className={`flex flex-col items-center justify-center py-16 px-4 text-center cursor-pointer transition-colors duration-200 ${
-              isDragActive
-                ? "bg-primary/10 border-primary"
-                : "hover:bg-muted/50"
-            } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
-          >
-            <input {...getInputProps()} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-2 border-dashed bg-muted/30">
+          <CardContent className="p-0">
+            <div
+              {...getRootProps()}
+              className={`flex flex-col items-center justify-center py-12 px-4 text-center cursor-pointer transition-colors duration-200 ${
+                isDragActive
+                  ? "bg-primary/10 border-primary"
+                  : "hover:bg-muted/50"
+              } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
+            >
+              <input {...getInputProps()} />
 
-            {uploadStatus === "idle" && (
-              <>
-                <UploadCloud className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">
-                  Arraste um ficheiro .ZIP para aqui
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ou clique para procurar. O sistema deteta automaticamente se é
-                  um carro ou uma pista.
-                </p>
-              </>
-            )}
+              {uploadStatus === "idle" && (
+                <>
+                  <UploadCloud className="w-10 h-10 text-muted-foreground mb-3" />
+                  <h3 className="text-md font-semibold">
+                    Arraste um ficheiro .ZIP
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ou clique para procurar (.zip)
+                  </p>
+                </>
+              )}
 
-            {(uploadStatus === "uploading" ||
-              uploadStatus === "processing") && (
-              <div className="flex flex-col items-center max-w-md w-full">
-                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                <h3 className="text-lg font-semibold">
-                  {uploadStatus === "uploading"
-                    ? "A enviar ficheiro..."
-                    : "A processar Mod..."}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-2 text-center">
-                  {uploadMessage}
-                </p>
-                {uploadStatus === "processing" && (
-                  <Progress
-                    value={null}
-                    className="w-full mt-4 h-2 animate-pulse"
-                  />
+              {(uploadStatus === "uploading" ||
+                uploadStatus === "processing") && (
+                <div className="flex flex-col items-center max-w-sm w-full">
+                  <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
+                  <h3 className="text-md font-semibold">
+                    {uploadStatus === "uploading"
+                      ? "A enviar/baixar..."
+                      : "A processar..."}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 text-center truncate w-full px-4">
+                    {uploadMessage}
+                  </p>
+                </div>
+              )}
+
+              {uploadStatus === "success" && (
+                <>
+                  <CheckCircle className="w-10 h-10 text-green-500 mb-3" />
+                  <h3 className="text-md font-semibold text-green-600">
+                    Sucesso!
+                  </h3>
+                </>
+              )}
+
+              {uploadStatus === "error" && (
+                <>
+                  <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
+                  <h3 className="text-md font-semibold text-red-600 text-center">
+                    Erro na Instalação
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUploadStatus("idle");
+                    }}
+                    className="mt-2 text-xs underline text-muted-foreground"
+                  >
+                    Tentar novamente
+                  </button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/10 h-full flex flex-col justify-center border-2 border-transparent">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-md flex items-center gap-2">
+              <Link className="w-4 h-4" /> Instalar via Link Direto
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Cole o link direto (.zip) para o servidor baixar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://exemplo.com/mod.zip"
+                value={downloadUrl}
+                onChange={(e) => setDownloadUrl(e.target.value)}
+                disabled={isUploading}
+                className="bg-background"
+              />
+              <Button 
+                onClick={handleDownloadFromUrl} 
+                disabled={isUploading || !downloadUrl}
+                className="shrink-0"
+              >
+                {isUploading && uploadStatus !== "idle" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Baixar"
                 )}
-              </div>
-            )}
-
-            {uploadStatus === "success" && (
-              <>
-                <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
-                <h3 className="text-lg font-semibold text-green-600">
-                  Sucesso!
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {uploadMessage}
-                </p>
-              </>
-            )}
-
-            {uploadStatus === "error" && (
-              <>
-                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-                <h3 className="text-lg font-semibold text-red-600">
-                  Erro na Instalação
-                </h3>
-                <p className="text-sm text-red-500/80 mt-1">{uploadMessage}</p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUploadStatus("idle");
-                  }}
-                  className="mt-4 text-sm underline text-muted-foreground"
-                >
-                  Tentar novamente
-                </button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Apenas links diretos de download. Sites como Mediafire podem falhar.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">

@@ -29,9 +29,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const content = await fs.readFile(filePath, "utf-8");
+    console.log(`[config-editor] File read successful: ${file}`);
     return NextResponse.json({ file, content });
-  } catch {
-    return NextResponse.json({ error: "File not found." }, { status: 404 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(`[config-editor] Read error for ${file}:`, error.message || error);
+    return NextResponse.json({ error: "File not found or unreadable." }, { status: 404 });
   }
 }
 
@@ -51,9 +54,11 @@ export async function POST(req: NextRequest) {
 
   try {
     await fs.writeFile(filePath, content, "utf-8");
+    console.log(`[config-editor] File write successful: ${file}`);
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("[config-editor] write error", err);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(`[config-editor] Write error for ${file}:`, error.message || error);
     return NextResponse.json({ error: "Failed to write file." }, { status: 500 });
   }
 }

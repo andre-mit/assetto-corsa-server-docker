@@ -34,9 +34,12 @@ export async function GET() {
     }
 
     const parsedData = YAML.parse(fileContent) || defaultCSPConfig;
+    console.log("[api/csp] CSP configuration read successful");
     return NextResponse.json({ cspCfg: parsedData });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[api/csp] GET error:", error.message || error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
 
@@ -49,8 +52,11 @@ export async function POST(req: Request) {
 
     await fs.writeFile(configPath, yamlString);
 
+    console.log("[api/csp] CSP configuration updated successful");
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[api/csp] POST error:", error.message || error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }

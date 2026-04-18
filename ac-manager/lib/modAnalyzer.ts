@@ -1,11 +1,12 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { CarUIData, TrackUIData } from '@/types/ac-server';
 
 export interface NormalizedMod {
   type: 'car' | 'track';
   id: string;
   sourcePath: string;
-  uiData: any;
+  uiData: CarUIData & TrackUIData; // Combined for easier access during analysis
   previewImage: Buffer | null;
 }
 
@@ -55,7 +56,7 @@ export async function analyzeExtractedMod(extractedTempDir: string): Promise<Nor
 
       const modId = path.basename(modRoot);
       const uiContent = await fs.readFile(jsonPath, 'utf-8');
-      const uiData = JSON.parse(uiContent);
+      const uiData = JSON.parse(uiContent) as CarUIData & TrackUIData;
 
       let previewBuffer: Buffer | null = null;
       try {
@@ -67,7 +68,7 @@ export async function analyzeExtractedMod(extractedTempDir: string): Promise<Nor
           previewBuffer = await fs.readFile(badgePath);
         }
       } catch (imgError) {
-        console.warn(`Image not found for mod ${modId}.`);
+        console.warn(`[modAnalyzer] Image not found for mod ${modId}.`);
       }
 
       modsFound.push({
@@ -78,8 +79,9 @@ export async function analyzeExtractedMod(extractedTempDir: string): Promise<Nor
         previewImage: previewBuffer
       });
 
-    } catch (error) {
-      console.error(`Error processing file ${jsonPath}:`, error);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error(`[modAnalyzer] Error processing file ${jsonPath}:`, error.message || error);
     }
   }
 

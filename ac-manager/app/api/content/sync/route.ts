@@ -32,8 +32,9 @@ async function uploadToS3(buffer: Buffer, key: string): Promise<string | null> {
     return process.env.S3_PUBLIC_URL
       ? `${process.env.S3_PUBLIC_URL}/${key}`
       : `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
-  } catch (error) {
-    console.error(`Error uploading key ${key} to S3:`, error);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(`[api/content/sync] Error uploading key ${key} to S3:`, error.message || error);
     return null;
   }
 }
@@ -128,13 +129,16 @@ export async function POST() {
       console.warn('Cars directory not found, skipping.');
     }
 
+    const successMessage = `Sync complete. ${tracksCount} track(s) and ${carsCount} car(s) registered.`;
+    console.log(`[api/content/sync] ${successMessage}`);
     return NextResponse.json({
       success: true,
-      message: `Sync complete. ${tracksCount} track(s) and ${carsCount} car(s) registered.`
+      message: successMessage
     });
 
-  } catch (error: any) {
-    console.error('Error during content sync:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('[api/content/sync] Error during content sync:', error.message || error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }

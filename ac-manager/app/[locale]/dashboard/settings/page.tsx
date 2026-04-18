@@ -16,12 +16,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { AcServerConfig } from "@/types/ac-server";
 
 export default function SettingsPage() {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
 
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<AcServerConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -38,11 +39,17 @@ export default function SettingsPage() {
       });
   }, [t]);
 
-  const updateServerValue = (key: string, value: any) => {
-    setConfig((prev: any) => ({
-      ...prev,
-      SERVER: { ...prev.SERVER, [key]: value },
-    }));
+  const updateServerValue = <K extends keyof AcServerConfig["SERVER"]>(
+    key: K,
+    value: AcServerConfig["SERVER"][K]
+  ) => {
+    setConfig((prev: AcServerConfig | null) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        SERVER: { ...prev.SERVER, [key]: value },
+      };
+    });
   };
 
   const handleSave = async () => {
@@ -250,10 +257,13 @@ export default function SettingsPage() {
                     <Switch
                       checked={config.PRACTICE?.IS_OPEN == 1}
                       onCheckedChange={(checked) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          PRACTICE: { ...p.PRACTICE, IS_OPEN: checked ? 1 : 0 },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            PRACTICE: { ...p.PRACTICE, NAME: p.PRACTICE?.NAME || "Practice", IS_OPEN: checked ? 1 : 0 },
+                          };
+                        })
                       }
                     />
                   </h3>
@@ -263,10 +273,13 @@ export default function SettingsPage() {
                       type="number"
                       value={config.PRACTICE?.TIME || 0}
                       onChange={(e) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          PRACTICE: { ...p.PRACTICE, TIME: parseInt(e.target.value) },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            PRACTICE: { ...p.PRACTICE, NAME: p.PRACTICE?.NAME || "Practice", IS_OPEN: p.PRACTICE?.IS_OPEN || 0, TIME: parseInt(e.target.value) },
+                          };
+                        })
                       }
                     />
                   </div>
@@ -278,10 +291,13 @@ export default function SettingsPage() {
                     <Switch
                       checked={config.QUALIFY?.IS_OPEN == 1}
                       onCheckedChange={(checked) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          QUALIFY: { ...p.QUALIFY, IS_OPEN: checked ? 1 : 0 },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            QUALIFY: { ...p.QUALIFY, NAME: p.QUALIFY?.NAME || "Qualify", IS_OPEN: checked ? 1 : 0 },
+                          };
+                        })
                       }
                     />
                   </h3>
@@ -291,10 +307,13 @@ export default function SettingsPage() {
                       type="number"
                       value={config.QUALIFY?.TIME || 0}
                       onChange={(e) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          QUALIFY: { ...p.QUALIFY, TIME: parseInt(e.target.value) },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            QUALIFY: { ...p.QUALIFY, NAME: p.QUALIFY?.NAME || "Qualify", IS_OPEN: p.QUALIFY?.IS_OPEN || 0, TIME: parseInt(e.target.value) },
+                          };
+                        })
                       }
                     />
                   </div>
@@ -306,10 +325,13 @@ export default function SettingsPage() {
                     <Switch
                       checked={config.RACE?.IS_OPEN == 1}
                       onCheckedChange={(checked) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          RACE: { ...p.RACE, IS_OPEN: checked ? 1 : 0 },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            RACE: { ...p.RACE, NAME: p.RACE?.NAME || "Race", IS_OPEN: checked ? 1 : 0 },
+                          };
+                        })
                       }
                     />
                   </h3>
@@ -319,10 +341,13 @@ export default function SettingsPage() {
                       type="number"
                       value={config.RACE?.LAPS || 0}
                       onChange={(e) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          RACE: { ...p.RACE, LAPS: parseInt(e.target.value) },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            RACE: { ...p.RACE, NAME: p.RACE?.NAME || "Race", IS_OPEN: p.RACE?.IS_OPEN || 0, LAPS: parseInt(e.target.value) },
+                          };
+                        })
                       }
                     />
                   </div>
@@ -332,10 +357,13 @@ export default function SettingsPage() {
                       type="number"
                       value={config.RACE?.WAIT_TIME || 60}
                       onChange={(e) =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          RACE: { ...p.RACE, WAIT_TIME: parseInt(e.target.value) },
-                        }))
+                        setConfig((p: AcServerConfig | null) => {
+                          if (!p) return null;
+                          return {
+                            ...p,
+                            RACE: { ...p.RACE, NAME: p.RACE?.NAME || "Race", IS_OPEN: p.RACE?.IS_OPEN || 0, WAIT_TIME: parseInt(e.target.value) },
+                          };
+                        })
                       }
                     />
                   </div>

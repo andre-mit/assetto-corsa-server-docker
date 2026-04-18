@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AcServerConfig, Track, Car } from "@/types/ac-server";
 
 export default function EntryListPage() {
-  const [config, setConfig] = useState<any>(null);
-  const [tracks, setTracks] = useState<any[]>([]);
-  const [cars, setCars] = useState<any[]>([]);
+  const [config, setConfig] = useState<AcServerConfig | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   
-  const [selectedTrack, setSelectedTrack] = useState<any>(null);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [selectedCars, setSelectedCars] = useState<string[]>([]);
   const [maxClients, setMaxClients] = useState(10);
   
@@ -39,7 +40,7 @@ export default function EntryListPage() {
         setSelectedCars(currentCars);
 
         const currentTrackId = configData.serverCfg.SERVER.TRACK;
-        const matchedTrack = tracksData.find((t: any) => t.folderName === currentTrackId);
+        const matchedTrack = (tracksData as Track[]).find((t: Track) => t.folderName === currentTrackId);
         if (matchedTrack) setSelectedTrack(matchedTrack);
       }
       setIsLoading(false);
@@ -111,7 +112,7 @@ export default function EntryListPage() {
               <Select 
                 value={selectedTrack?.folderName || ""} 
                 onValueChange={(val) => {
-                  const t = tracks.find(track => track.folderName === val);
+                  const t = tracks.find(track => track.folderName === val) || null;
                   setSelectedTrack(t);
                   if (t && maxClients > t.pitboxes) setMaxClients(t.pitboxes);
                 }}

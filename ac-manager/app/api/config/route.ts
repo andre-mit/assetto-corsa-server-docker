@@ -2,8 +2,15 @@ import { NextResponse } from 'next/server';
 import { generateEntryList, readConfig, writeConfig } from '@/lib/configParser';
 
 export async function GET() {
-  const serverCfg = await readConfig('server_cfg.ini');
-  return NextResponse.json({ serverCfg });
+  try {
+    const serverCfg = await readConfig('server_cfg.ini');
+    console.log("[api/config] Configuration read successful");
+    return NextResponse.json({ serverCfg });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[api/config] GET error:", error.message || error);
+    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -43,8 +50,11 @@ export async function POST(request: Request) {
     
     await generateEntryList(carsArray, maxClients);
 
+    console.log("[api/config] Configuration saved and entry_list generated");
     return NextResponse.json({ success: true, message: 'Files generated successfully.' });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[api/config] POST error:", error.message || error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }

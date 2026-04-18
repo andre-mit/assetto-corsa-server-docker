@@ -50,7 +50,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
   trigger-deploy:
     name: Trigger Coolify
-    needs: build-and-push-web
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Call Coolify Webhook

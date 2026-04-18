@@ -26,7 +26,6 @@ COPY --chown=steam:steam shared-config/ /home/steam/ac-defaults/cfg/
 
 COPY --chmod=755 ac-server/entrypoint.sh /home/steam/entrypoint.sh
 
-VOLUME ["/home/steam/ac-server"]
 
 WORKDIR /home/steam
 

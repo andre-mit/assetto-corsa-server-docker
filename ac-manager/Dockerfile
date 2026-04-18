@@ -15,6 +15,8 @@ COPY . .
 
 ENV NODE_ENV=production
 
+ENV DATABASE_URL="sqlserver://dummy:1433;database=dummy;user=dummy;password=dummy;"
+
 RUN bun prisma generate
 
 RUN bun run build

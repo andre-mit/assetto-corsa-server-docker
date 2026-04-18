@@ -3,11 +3,21 @@ networks:
     external: true
 
 volumes:
-  ac-postgres-data:
-    # PostgreSQL data (only when profile 'postgres' is active)
+  ac-postgres-data: # PostgreSQL data (only when profile 'postgres' is active)
+  ac-shared-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOST_CONTENT_PATH:-.}/ac-shared-config
+  ac-shared-content:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOST_CONTENT_PATH:-.}/ac-shared-content
 
 services:
-
   # Optional managed PostgreSQL — activate with COMPOSE_PROFILES=postgres
   # Leave unset to use an external PostgreSQL (set DATABASE_URL directly)
   postgres:
@@ -48,9 +58,9 @@ services:
       - "8081:8081/tcp"
       - "20081:20081/udp"
     volumes:
-      - "${HOST_CONTENT_PATH:-.}/ac-shared-config:/home/steam/ac-server/cfg"
-      - "${HOST_CONTENT_PATH:-.}/ac-shared-content:/home/steam/ac-server/content"
-    restart: unless-stopped
+      - ac-shared-config:/home/steam/ac-server/cfg
+      - ac-shared-content:/home/steam/ac-server/content
+    restart: on-failure
     labels:
       - "app.assetto-corsa.service=ac-server"
       - "coolify.name=ac-server"
@@ -66,8 +76,8 @@ services:
     expose:
       - 3000
     volumes:
-      - "${HOST_CONTENT_PATH:-.}/ac-shared-config:/app/cfg"
-      - "${HOST_CONTENT_PATH:-.}/ac-shared-content:/app/game-content"
+      - ac-shared-config:/app/cfg
+      - ac-shared-content:/app/game-content
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOSTNAME=${WEB_HOSTNAME}

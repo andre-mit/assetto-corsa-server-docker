@@ -38,12 +38,75 @@ export default function ContentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [activeJobIds, setActiveJobIds] = useState<string[]>([]);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "processing" | "success" | "error"
   >("idle");
   const [uploadMessage, setUploadMessage] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
+
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mods/job");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setJobs(data);
+        
+        // Auto-track active jobs found in the list
+        const activeIds = data
+          .filter(j => ["PENDING", "DOWNLOADING", "EXTRACTING", "INGESTING"].includes(j.status))
+          .map(j => j.id);
+        
+        setActiveJobIds(prev => {
+          const combined = Array.from(new Set([...prev, ...activeIds]));
+          return combined;
+        });
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(fetchJobs, 10000); // Background refresh every 10s
+    return () => clearInterval(interval);
+  }, [fetchJobs]);
+
+  useEffect(() => {
+    if (activeJobIds.length === 0) return;
+
+    const interval = setInterval(async () => {
+      const updatedJobIds = [...activeJobIds];
+      const newJobs: any[] = [];
+
+      for (let i = updatedJobIds.length - 1; i >= 0; i--) {
+        const id = updatedJobIds[i];
+        try {
+          const res = await fetch(`/api/mods/job/${id}`);
+          const job = await res.json();
+          newJobs.push(job);
+
+          if (job.status === "SUCCESS" || job.status === "FAILED") {
+            updatedJobIds.splice(i, 1);
+            if (job.status === "SUCCESS") {
+              toast.success(t("success"));
+              fetchData();
+            } else {
+              toast.error(`${t("installError")}: ${job.error}`);
+            }
+          }
+        } catch (e) {
+          updatedJobIds.splice(i, 1);
+        }
+      }
+      setJobs(newJobs);
+      setActiveJobIds(updatedJobIds);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeJobIds, t]);
 
   const handleSyncBaseContent = async () => {
     setIsSyncing(true);
@@ -96,9 +159,6 @@ export default function ContentPage() {
       formData.append("modFile", file);
 
       try {
-        setUploadStatus("processing");
-        setUploadMessage(t("extracting"));
-
         const response = await fetch("/api/mods/upload", {
           method: "POST",
           body: formData,
@@ -106,44 +166,38 @@ export default function ContentPage() {
 
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.jobId) {
+          setActiveJobIds(prev => [...prev, data.jobId]);
           setUploadStatus("success");
-          setUploadMessage(data.message || t("success"));
-          fetchData();
+          setUploadMessage(t("success"));
         } else {
           setUploadStatus("error");
           setUploadMessage(data.error || t("installError"));
         }
       } catch (err: unknown) {
-        const error = err as Error;
-        console.error("[api/mods/upload] Error:", error.message || error);
         setUploadStatus("error");
         setUploadMessage(t("connError"));
       } finally {
         setIsUploading(false);
         setTimeout(() => {
-          if (uploadStatus !== "error") {
-            setUploadStatus("idle");
-            setUploadMessage("");
-          }
-        }, 5000);
+          setUploadStatus("idle");
+          setUploadMessage("");
+        }, 3000);
       }
     },
-    [uploadStatus],
+    [t],
   );
   
   const handleDownloadFromUrl = async () => {
     if (!downloadUrl || !downloadUrl.startsWith("http")) {
-      toast.error(t("urlPlaceholder")); // Using placeholder as example, or better add a generic validation msg
+      toast.error(t("urlPlaceholder"));
       return;
     }
 
     setIsUploading(true);
-    setUploadStatus("uploading");
-    setUploadMessage(t("transferring"));
+    setUploadStatus("processing");
     
     try {
-      setUploadStatus("processing");
       const response = await fetch("/api/mods/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -152,17 +206,15 @@ export default function ContentPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.jobId) {
+        setActiveJobIds(prev => [...prev, data.jobId]);
         setUploadStatus("success");
-        setUploadMessage(data.message || t("success"));
         setDownloadUrl("");
-        fetchData();
       } else {
         setUploadStatus("error");
         setUploadMessage(data.error || t("installError"));
       }
     } catch (err: unknown) {
-      console.error("[api/mods/download] Error:", err);
       setUploadStatus("error");
       setUploadMessage(t("connError"));
     } finally {
@@ -170,7 +222,7 @@ export default function ContentPage() {
       setTimeout(() => {
         setUploadStatus("idle");
         setUploadMessage("");
-      }, 5000);
+      }, 3000);
     }
   };
 
@@ -228,18 +280,19 @@ export default function ContentPage() {
                 </>
               )}
 
-              {(uploadStatus === "uploading" ||
-                uploadStatus === "processing") && (
-                <div className="flex flex-col items-center max-w-sm w-full">
+              {uploadStatus === "uploading" && (
+                <div className="flex flex-col items-center max-w-sm w-full animate-in fade-in zoom-in">
                   <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
-                  <h3 className="text-md font-semibold">
-                    {uploadStatus === "uploading"
-                      ? t("uploading")
-                      : t("processing")}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 text-center truncate w-full px-4">
-                    {uploadMessage}
-                  </p>
+                  <h3 className="text-md font-semibold">{t("uploading")}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{uploadMessage}</p>
+                </div>
+              )}
+
+              {uploadStatus === "processing" && (
+                <div className="flex flex-col items-center max-w-sm w-full animate-in fade-in zoom-in">
+                  <CheckCircle className="w-10 h-10 text-primary mb-3" />
+                  <h3 className="text-md font-semibold">{t("success")}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{t("transferring")}</p>
                 </div>
               )}
 
@@ -296,7 +349,7 @@ export default function ContentPage() {
                 disabled={isUploading || !downloadUrl}
                 className="shrink-0"
               >
-                {isUploading && uploadStatus !== "idle" ? (
+                {isUploading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   t("download")
@@ -309,6 +362,34 @@ export default function ContentPage() {
           </CardContent>
         </Card>
       </div>
+
+      {jobs.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin" /> {t("activeJobs")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4 pt-0 space-y-4">
+            {jobs.map((job) => (
+              <div key={job.id} className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={job.status === "FAILED" ? "destructive" : "outline"}>
+                      {t(`jobStatus.${job.status}`)}
+                    </Badge>
+                    <span className="text-muted-foreground max-w-[200px] truncate">
+                      {job.type === "DOWNLOAD" ? job.target : "ZIP Upload"}
+                    </span>
+                  </div>
+                  <span className="font-mono">{job.progress}%</span>
+                </div>
+                <Progress value={job.progress} className="h-1" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12">

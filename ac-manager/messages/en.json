@@ -32,7 +32,7 @@
     "start": "Start",
     "stop": "Stop",
     "restart": "Restart",
-    "connectionLost": "Connection lost. Retrying...",
+    "connectionLost": "Connection lost. Reconnecting...",
     "waitingLogs": "Waiting for server logs..."
   },
   "Common": {
@@ -46,7 +46,7 @@
   },
   "Settings": {
     "title": "Server Settings",
-    "description": "Manage the Assetto Corsa server_cfg.ini file.",
+    "description": "Manage your Assetto Corsa server_cfg.ini file.",
     "saveChanges": "Save Changes",
     "saveSuccess": "Settings saved. Restart the server to apply.",
     "loadError": "Error loading settings.",
@@ -65,8 +65,8 @@
       "maxPlayers": "Max Players"
     },
     "network": {
-      "title": "Network Settings",
-      "description": "If you change ports here, you must also update docker-compose.yml.",
+      "title": "Network Configuration",
+      "description": "If you change ports here, you will need to change docker-compose.yml.",
       "udpPort": "UDP Port",
       "tcpPort": "TCP Port",
       "httpPort": "HTTP Port"
@@ -75,15 +75,15 @@
       "title": "Driving Assists",
       "description": "Define what is allowed on your server.",
       "abs": "Allow ABS",
-      "absDesc": "Anti-lock braking system.",
+      "absDesc": "Anti-lock Braking System.",
       "tc": "Allow Traction Control (TC)",
-      "tcDesc": "Prevents wheel spin when exiting corners.",
+      "tcDesc": "Prevents wheelspin when exiting corners.",
       "tyreBlankets": "Tyre Blankets",
-      "tyreBranketsDesc": "Tyres start pre-heated from the pits."
+      "tyreBranketsDesc": "Tires start pre-warmed from the pits."
     },
     "sessions": {
-      "title": "Session Duration",
-      "description": "Set the duration of practice, qualifying and race sessions.",
+      "title": "Session Durations",
+      "description": "Adjust times for practice, qualifying, and race.",
       "practice": "Practice",
       "qualifying": "Qualifying",
       "race": "Race",
@@ -93,8 +93,8 @@
     }
   },
   "ConfigEditor": {
-    "title": "Config File Editor",
-    "description": "Directly edit .ini and .yml configuration files shared between the manager and the AC server.",
+    "title": "Configuration File Editor",
+    "description": "Directly edit .ini and .yml files shared between the manager and the AC server.",
     "save": "Save File",
     "reload": "Reload",
     "saveSuccess": "File saved successfully.",
@@ -104,7 +104,7 @@
   },
   "Users": {
     "title": "User Management",
-    "description": "Add and manage users who can access the AC Manager.",
+    "description": "Add and manage users who can access AC Manager.",
     "addUser": "Add User",
     "newUser": "New User",
     "newUserDescription": "Create a new account to access the manager.",
@@ -116,47 +116,57 @@
     "createSuccess": "User created successfully.",
     "createError": "Failed to create user.",
     "userList": "User List",
-    "totalUsers": "users registered",
+    "totalUsers": "registered users",
     "createdBy": "Created by",
     "removeUser": "Remove user",
     "roles": {
       "MASTER": "Master",
-      "ADMIN": "Admin",
+      "ADMIN": "Administrator",
       "VIEWER": "Viewer"
     }
   },
   "Errors": {
     "notFound": "Page not found.",
-    "unauthorized": "You need to sign in to access this page.",
+    "unauthorized": "You need to log in to access this page.",
     "forbidden": "You do not have permission to access this resource.",
-    "serverError": "An internal error occurred. Please try again."
+    "serverError": "An internal error occurred. Try again."
   },
   "Content": {
     "title": "Content Manager",
     "description": "Install new mods (Cars or Tracks) or view existing content.",
     "syncBase": "Sync Base Content",
     "syncSuccess": "Content synchronized successfully!",
-    "installZip": "Drag a .ZIP file",
+    "installZip": "Drop a .ZIP file",
     "installZipDetail": "Or click to browse (.zip)",
     "installUrl": "Install via Direct Link",
     "installUrlDetail": "Paste the direct link (.zip) for the server to download.",
-    "installUrlHint": "Direct download links only. Sites like Mediafire may fail.",
+    "installUrlHint": "Only direct download links. Sites like Mediafire may fail.",
     "urlPlaceholder": "https://example.com/mod.zip",
     "download": "Download",
-    "uploading": "Uploading/Downloading...",
+    "uploading": "Sending/Downloading...",
     "processing": "Processing...",
     "success": "Success!",
     "installError": "Installation Error",
-    "tryAgain": "Try again",
+    "tryAgain": "Try Again",
     "transferring": "Transferring file to server...",
-    "extracting": "Extracting, analyzing files and syncing. This may take a few minutes...",
-    "connError": "Server connection failure.",
+    "extracting": "Extracting, analyzing files, and syncing. This may take a few minutes...",
+    "connError": "Failed to connect to the server.",
     "noCars": "No cars found.",
     "noTracks": "No tracks found.",
     "cars": "Cars",
     "tracks": "Tracks",
     "mod": "Mod",
-    "pits": "Pits"
+    "pits": "Pits",
+    "activeJobs": "Background Installations",
+    "noActiveJobs": "No active installations.",
+    "jobStatus": {
+      "PENDING": "Queued...",
+      "DOWNLOADING": "Downloading...",
+      "EXTRACTING": "Extracting...",
+      "INGESTING": "Finalizing...",
+      "SUCCESS": "Installed!",
+      "FAILED": "Failed"
+    }
   },
   "EntryList": {
     "title": "Grid Setup",
@@ -165,16 +175,16 @@
     "selectTrack": "Select track",
     "selectTrackError": "Please select a track!",
     "selectCarError": "Please select at least one car!",
-    "maxClientsError": "This track supports a maximum of {max} slots.",
-    "saveSuccess": "Grid updated! Pitboxes have been generated and distributed successfully.",
+    "maxClientsError": "The track supports a maximum of {max} slots.",
+    "saveSuccess": "Grid updated! Pitboxes were successfully generated and distributed.",
     "circuit": "Circuit",
     "maxCapacity": "Max Capacity:",
     "gridSize": "Grid Size",
-    "gridSizeDesc": "How many racers can join the server.",
-    "gridSizeLimitError": "Value exceeds the selected track limit!",
+    "gridSizeDesc": "How many drivers can join the server.",
+    "gridSizeLimitError": "Value exceeds the limit of the selected track!",
     "carRoster": "Car Roster",
-    "carRosterDesc": "Select allowed vehicles. The system will distribute the {max} slots equally among chosen cars.",
-    "noCars": "No cars registered in the database. Install mods first!",
+    "carRosterDesc": "Select allowed vehicles. Slots will be distributed equally among selected cars.",
+    "noCars": "No cars registered. Install mods first!",
     "noImage": "No Image"
   }
 }

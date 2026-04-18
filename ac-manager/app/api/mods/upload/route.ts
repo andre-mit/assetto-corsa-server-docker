@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { installModFromZip } from '@/lib/modInstaller';
+import prisma from '@/lib/prisma';
+import { triggerQueue } from '@/lib/modQueue';
 
 const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
 export async function POST(request: Request) {
-  const tempZipPath = path.join(TEMP_DIR, `upload_${Date.now()}.zip`);
-
   try {
     const formData = await request.formData();
     const file = formData.get('modFile') as File;
@@ -18,35 +17,35 @@ export async function POST(request: Request) {
 
     await fs.mkdir(TEMP_DIR, { recursive: true });
     
-    // Write the uploaded file to a temporary location
+    // We still have to write the uploaded file to disk first
+    // In a fully optimized system, we'd stream the upload too,
+    // but for now this is a good first step.
+    const tempZipPath = path.join(TEMP_DIR, `upload_${Date.now()}.zip`);
     const buffer = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(tempZipPath, buffer);
 
-    // Call the installer
-    const result = await installModFromZip(tempZipPath);
+    // Create a background job
+    const job = await prisma.modJob.create({
+      data: {
+        type: 'UPLOAD',
+        target: tempZipPath,
+        status: 'PENDING',
+        progress: 0,
+      },
+    });
 
-    // Cleanup the uploaded zip
-    await fs.rm(tempZipPath, { force: true });
+    // Trigger queue
+    triggerQueue().catch(err => console.error("[api/mods/upload] Error triggering queue:", err));
 
-    console.log(`[api/mods/upload] Success: ${result.message}`);
-    return NextResponse.json(result);
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Upload processing queued.',
+      jobId: job.id 
+    });
 
   } catch (err: unknown) {
     const error = err as Error;
-    console.error('[api/mods/upload] Error during mod upload/install:', error.message || error);
-
-    // Cleanup if possible
-    try {
-      if (await fs.stat(tempZipPath).catch(() => null)) {
-        await fs.rm(tempZipPath, { force: true });
-      }
-    } catch (cleanupError) {
-      console.error('[api/mods/upload] Cleanup error:', cleanupError);
-    }
-
-    return NextResponse.json({
-      error: 'Internal error while processing the file.',
-      details: error.message || 'Unknown error'
-    }, { status: 500 });
+    console.error('[api/mods/upload] Error during mod upload:', error.message || error);
+    return NextResponse.json({ error: 'Internal error while processing the upload.' }, { status: 500 });
   }
 }

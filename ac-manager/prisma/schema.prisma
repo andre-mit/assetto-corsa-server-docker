@@ -38,3 +38,15 @@ model Car {
   isMod       Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
+
+model ModJob {
+  id        String   @id @default(cuid())
+  type      String   // "UPLOAD" or "DOWNLOAD"
+  target    String?  // URL or Filename
+  status    String   // "PENDING", "DOWNLOADING", "EXTRACTING", "INGESTING", "SUCCESS", "FAILED"
+  progress  Int      @default(0)
+  error     String?
+  result    Json?    // Stores the list of installed mods on success
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

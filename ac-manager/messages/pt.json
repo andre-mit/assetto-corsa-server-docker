@@ -156,7 +156,17 @@
     "cars": "Carros",
     "tracks": "Pistas",
     "mod": "Mod",
-    "pits": "Pits"
+    "pits": "Pits",
+    "activeJobs": "Instalações em Segundo Plano",
+    "noActiveJobs": "Nenhuma instalação ativa.",
+    "jobStatus": {
+      "PENDING": "Na fila...",
+      "DOWNLOADING": "Baixando...",
+      "EXTRACTING": "Extraindo...",
+      "INGESTING": "Finalizando...",
+      "SUCCESS": "Instalado!",
+      "FAILED": "Falhou"
+    }
   },
   "EntryList": {
     "title": "Setup do Grid",

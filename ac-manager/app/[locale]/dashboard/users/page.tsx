@@ -40,10 +40,6 @@ interface UserEntry {
   createdBy: { name: string } | null;
 }
 
-interface AuthUser {
-  role: "MASTER" | "ADMIN" | "VIEWER";
-}
-
 const ROLE_BADGE: Record<string, string> = {
   MASTER: "bg-yellow-500/15 text-yellow-500 border-yellow-500/20",
   ADMIN: "bg-blue-500/15 text-blue-500 border-blue-500/20",
@@ -54,7 +50,7 @@ export default function UsersPage() {
   const t = useTranslations("Users");
 
   const [users, setUsers] = useState<UserEntry[]>([]);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authUser, setAuthUser] = useState<UserEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,25 +60,24 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"MASTER" | "ADMIN" | "VIEWER">("VIEWER");
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [usersRes, meRes] = await Promise.all([
-        fetch("/api/auth/users"),
-        fetch("/api/auth/me"),
-      ]);
-      const { users: list } = await usersRes.json();
-      const { user: me } = await meRes.json();
-      setUsers(list || []);
-      setAuthUser(me || null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    async function fetchUsers() {
+      setIsLoading(true);
+      try {
+        const [usersRes, meRes] = await Promise.all([
+          fetch("/api/auth/users"),
+          fetch("/api/auth/me"),
+        ]);
+        const { users: list } = await usersRes.json();
+        const { user: me } = await meRes.json();
+        setUsers(list || []);
+        setAuthUser(me || null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,15 +106,12 @@ export default function UsersPage() {
       setNewName("");
       setNewPassword("");
       setNewRole("VIEWER");
-      fetchUsers();
     } catch {
       toast.error(t("createError"));
     } finally {
       setIsSaving(false);
     }
   };
-
-  console.log(authUser);
 
   const availableRoles =
     authUser?.role === "MASTER" ? ["ADMIN", "VIEWER"] : ["VIEWER"];

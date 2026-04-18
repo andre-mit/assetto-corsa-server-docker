@@ -19,7 +19,6 @@ export async function getAcContainer() {
     throw new Error('Container not found (searched by label: app.assetto-corsa.service=ac-server)');
   }
 
-  // If multiple found (rare), get the first one
   return docker.getContainer(containers[0].Id);
 }
 
@@ -34,9 +33,8 @@ export async function getContainerStatus() {
   }
 }
 
-export async function getContainerLogStream(idOrName: string) {
-  // If idOrName is provided, use it, otherwise call getAcContainer
-  const container = idOrName ? docker.getContainer(idOrName) : await getAcContainer();
+export async function getContainerLogStream() {
+  const container = await getAcContainer();
   const info = await container.inspect();
 
   if (!info.State.Running) {

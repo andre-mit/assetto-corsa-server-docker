@@ -6,14 +6,14 @@ export async function GET() {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const logStream = await getContainerLogStream('ac-server-instance');
+        const logStream = await getContainerLogStream();
 
         logStream.on('data', (chunk: Buffer) => {
           const rawText = chunk.slice(8).toString('utf-8');
-          
+
           const cleanText = rawText.replace(/[^\x20-\x7E\n\r]/g, '');
           const lines = cleanText.split('\n');
-          
+
           for (const line of lines) {
             if (line.trim()) {
               controller.enqueue(new TextEncoder().encode(`data: ${line}\n\n`));

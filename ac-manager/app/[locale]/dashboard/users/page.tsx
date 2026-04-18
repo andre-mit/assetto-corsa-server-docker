@@ -119,17 +119,8 @@ export default function UsersPage() {
     }
   };
 
-  const availableRoles = ["VIEWER"];
-  switch (authUser?.role) {
-    case "MASTER":
-      availableRoles.push("ADMIN", "MASTER");
-      break;
-    case "ADMIN":
-      availableRoles.push("VIEWER");
-      break;
-    default:
-      break;
-  }
+  const availableRoles =
+    authUser?.role === "MASTER" ? ["ADMIN", "VIEWER"] : ["VIEWER"];
 
   if (isLoading) {
     return (

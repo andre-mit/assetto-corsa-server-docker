@@ -119,6 +119,8 @@ export default function UsersPage() {
     }
   };
 
+  console.log(authUser);
+
   const availableRoles =
     authUser?.role === "MASTER" ? ["ADMIN", "VIEWER"] : ["VIEWER"];
 

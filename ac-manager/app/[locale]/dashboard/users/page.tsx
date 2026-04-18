@@ -70,6 +70,8 @@ export default function UsersPage() {
         ]);
         const { users: list } = await usersRes.json();
         const { user: me } = await meRes.json();
+        console.log("list:" + JSON.stringify(list));
+        console.log("me:" + JSON.stringify(me));
         setUsers(list || []);
         setAuthUser(me || null);
       } finally {

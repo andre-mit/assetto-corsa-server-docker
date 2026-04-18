@@ -3,8 +3,6 @@ networks:
     external: true
 
 volumes:
-  ac-shared-config: # Config .ini/.yml — persisted, editable via ac-manager
-  ac-shared-content: # Game content (cars, tracks)
   ac-postgres-data:
     # PostgreSQL data (only when profile 'postgres' is active)
 

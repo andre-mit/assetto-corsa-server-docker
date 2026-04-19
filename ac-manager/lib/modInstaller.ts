@@ -66,9 +66,20 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
             ACL: 'public-read'
           }));
 
-          s3Url = process.env.S3_PUBLIC_URL
-            ? `${process.env.S3_PUBLIC_URL}/${s3Key}`
-            : `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`;
+          let baseUrl = process.env.S3_PUBLIC_URL;
+          
+          if (baseUrl) {
+            // Automatically append the bucket name if it's missing (very common with MinIO)
+            if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
+               baseUrl = baseUrl.endsWith('/') 
+                 ? `${baseUrl}${process.env.S3_BUCKET_NAME}` 
+                 : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
+            }
+            s3Url = `${baseUrl}/${s3Key}`;
+          } else {
+            s3Url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`;
+          }
+
         } catch (s3err) {
           console.warn(`[modInstaller] Failed to upload preview to S3 for ${mod.id}. Mod installation will continue. Error:`, s3err);
         }

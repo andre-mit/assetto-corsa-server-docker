@@ -7,13 +7,16 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
   images: {
-    remotePatterns: s3Url ? [
+    remotePatterns: [
       {
-        protocol: s3Url.protocol.replace(':', '') as 'http' | 'https',
-        hostname: s3Url.hostname,
-        pathname: '/**',
+        protocol: 'https',
+        hostname: '**',
       },
-    ] : [],
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+    ],
   },
 };
 

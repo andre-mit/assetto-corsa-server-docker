@@ -155,7 +155,7 @@ export default function ContentPage() {
       setUploadStatus("uploading");
       setUploadMessage(t("transferring"));
 
-      const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks to stay well below Next.js 10MB limit
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       const uniqueUploadId = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 

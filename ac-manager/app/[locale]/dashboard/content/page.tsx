@@ -159,7 +159,7 @@ export default function ContentPage() {
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       const uniqueUploadId = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-      let lastResponseData = null;
+      let lastResponseData: any = null;
 
       try {
         for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -291,8 +291,8 @@ export default function ContentPage() {
             <div
               {...getRootProps()}
               className={`flex flex-col items-center justify-center py-12 px-4 text-center cursor-pointer transition-colors duration-200 ${isDragActive
-                  ? "bg-primary/10 border-primary"
-                  : "hover:bg-muted/50"
+                ? "bg-primary/10 border-primary"
+                : "hover:bg-muted/50"
                 } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
             >
               <input {...getInputProps()} />

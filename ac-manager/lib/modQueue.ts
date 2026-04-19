@@ -90,56 +90,37 @@ async function processJob(jobId: string) {
 }
 
 async function downloadFile(url: string, dest: string, onProgress: (p: number) => void): Promise<void> {
-  try {
-    const response = await fetch(url, { redirect: 'follow' });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP Error ${response.status} ${response.statusText}`);
-    }
+  const { spawn } = await import('child_process');
 
-    const totalSize = parseInt(response.headers.get('content-length') ?? '0', 10);
-    let downloaded = 0;
+  return new Promise((resolve, reject) => {
+    const child = spawn('curl', ['-L', '-#', '-o', dest, url]);
+
     let lastProgress = -1;
 
-    const fileStream = fsSync.createWriteStream(dest);
-
-    if (!response.body) {
-      throw new Error('Response body is empty');
-    }
-
-    // Use web streams reader
-    const reader = response.body.getReader();
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      downloaded += value.length;
-      if (totalSize > 0) {
-        const p = Math.round((downloaded / totalSize) * 100);
-        // Throttle progress updates: only trigger when the percentage actually increases
+    child.stderr.on('data', (data: Buffer) => {
+      const output = data.toString();
+      const match = output.match(/(\d+\.?\d*)%/);
+      if (match && match[1]) {
+        const p = Math.round(parseFloat(match[1]));
         if (p > lastProgress) {
           lastProgress = p;
-          // Trigger the progress callback async so we don't block the stream
           setImmediate(() => onProgress(p));
         }
       }
-      
-      const canWrite = fileStream.write(value);
-      if (!canWrite) {
-        await new Promise<void>(resolve => fileStream.once('drain', resolve));
-      }
-    }
-    
-    fileStream.end();
-
-    await new Promise<void>((resolve, reject) => {
-      fileStream.on('finish', () => resolve());
-      fileStream.on('error', (err) => reject(err));
     });
 
-  } catch (err) {
-    fsSync.rmSync(dest, { force: true });
-    throw err;
-  }
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        fsSync.rmSync(dest, { force: true });
+        reject(new Error(`curl command exited with code ${code}. Failed to download.`));
+      }
+    });
+
+    child.on('error', (err) => {
+      fsSync.rmSync(dest, { force: true });
+      reject(err);
+    });
+  });
 }

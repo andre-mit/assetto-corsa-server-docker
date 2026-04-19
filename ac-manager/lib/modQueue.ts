@@ -70,11 +70,6 @@ async function processJob(jobId: string) {
       },
     });
 
-    // Cleanup local temp file if it was a download
-    if (job.type === "DOWNLOAD") {
-      await fs.rm(localPath, { force: true });
-    }
-
     console.log(`[modQueue] Job ${jobId} completed successfully`);
   } catch (err: unknown) {
     const error = err as Error;
@@ -84,6 +79,11 @@ async function processJob(jobId: string) {
       data: { status: "FAILED", error: error.message || "Unknown error" },
     });
   } finally {
+    // Ensure cleanup of the local temp file, whether success or failure
+    if (localPath) {
+      await fs.rm(localPath, { force: true }).catch(() => {});
+    }
+
     activeJobs.delete(jobId);
     triggerQueue(); // Check for next pending job
   }

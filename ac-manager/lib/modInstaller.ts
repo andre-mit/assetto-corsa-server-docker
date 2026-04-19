@@ -57,17 +57,21 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
       if (mod.previewImage && process.env.S3_BUCKET_NAME) {
         const s3Key = `mods/${mod.type}s/${mod.id}/preview.png`;
 
-        await s3.send(new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: s3Key,
-          Body: mod.previewImage,
-          ContentType: 'image/png',
-          ACL: 'public-read'
-        }));
+        try {
+          await s3.send(new PutObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: s3Key,
+            Body: mod.previewImage,
+            ContentType: 'image/png',
+            ACL: 'public-read'
+          }));
 
-        s3Url = process.env.S3_PUBLIC_URL
-          ? `${process.env.S3_PUBLIC_URL}/${s3Key}`
-          : `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`;
+          s3Url = process.env.S3_PUBLIC_URL
+            ? `${process.env.S3_PUBLIC_URL}/${s3Key}`
+            : `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`;
+        } catch (s3err) {
+          console.warn(`[modInstaller] Failed to upload preview to S3 for ${mod.id}. Mod installation will continue. Error:`, s3err);
+        }
       }
 
       if (mod.type === 'track') {

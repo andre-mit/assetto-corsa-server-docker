@@ -99,6 +99,7 @@ async function downloadFile(url: string, dest: string, onProgress: (p: number) =
 
     const totalSize = parseInt(response.headers.get('content-length') ?? '0', 10);
     let downloaded = 0;
+    let lastProgress = -1;
 
     const fileStream = fsSync.createWriteStream(dest);
 
@@ -116,7 +117,12 @@ async function downloadFile(url: string, dest: string, onProgress: (p: number) =
       downloaded += value.length;
       if (totalSize > 0) {
         const p = Math.round((downloaded / totalSize) * 100);
-        onProgress(p);
+        // Throttle progress updates: only trigger when the percentage actually increases
+        if (p > lastProgress) {
+          lastProgress = p;
+          // Trigger the progress callback async so we don't block the stream
+          setImmediate(() => onProgress(p));
+        }
       }
       
       const canWrite = fileStream.write(value);

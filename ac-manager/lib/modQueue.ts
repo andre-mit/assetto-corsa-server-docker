@@ -24,6 +24,7 @@ export async function triggerQueue() {
 
 async function processJob(jobId: string) {
   activeJobs.add(jobId);
+  let localPath = "";
 
   try {
     const job = await prisma.modJob.findUnique({ where: { id: jobId } });
@@ -31,7 +32,6 @@ async function processJob(jobId: string) {
 
     console.log(`[modQueue] Starting job ${jobId} (type: ${job.type})`);
 
-    let localPath = "";
 
     if (job.type === "DOWNLOAD") {
       await prisma.modJob.update({

@@ -10,6 +10,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid URL provided.' }, { status: 400 });
     }
 
+    console.log(`[api/mods/download] Received link: ${url}`);
+    
     // Create a background job instead of installing immediately
     const job = await prisma.modJob.create({
       data: {
@@ -20,8 +22,11 @@ export async function POST(request: Request) {
       },
     });
 
+    console.log(`[api/mods/download] DB Job saved successfully: ${job.id}`);
+    
     // Start processing in the background
     triggerQueue().catch(err => console.error("[api/mods/download] Error triggering queue:", err));
+    console.log(`[api/mods/download] Queue triggered`);
 
     return NextResponse.json({ 
       success: true, 

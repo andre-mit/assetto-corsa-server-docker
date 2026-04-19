@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
+import fs from 'fs';
+import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
+import { promisify } from 'util';
 import path from 'path';
 import prisma from '@/lib/prisma';
 import { triggerQueue } from '@/lib/modQueue';
@@ -8,22 +11,28 @@ const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('modFile') as File;
+    console.log('[api/mods/upload] Received upload request');
+    const filename = request.headers.get('x-filename');
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
+    if (!filename || !request.body) {
+      console.log('[api/mods/upload] Missing file or filename headers');
+      return NextResponse.json({ error: 'No file provided or missing custom headers.' }, { status: 400 });
     }
 
-    await fs.mkdir(TEMP_DIR, { recursive: true });
+    await fs.promises.mkdir(TEMP_DIR, { recursive: true });
     
-    // We still have to write the uploaded file to disk first
-    // In a fully optimized system, we'd stream the upload too,
-    // but for now this is a good first step.
-    const tempZipPath = path.join(TEMP_DIR, `upload_${Date.now()}.zip`);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(tempZipPath, buffer);
+    const tempZipPath = path.join(TEMP_DIR, `upload_${Date.now()}_${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`);
+    console.log(`[api/mods/upload] Streaming upload to ${tempZipPath}`);
 
+    // Stream the body directly to a file using Node's stream pipeline
+    const fileStream = fs.createWriteStream(tempZipPath);
+    
+    // Convert Web ReadableStream to Node Readable
+    const nodeStream = Readable.fromWeb(request.body as import('stream/web').ReadableStream);
+    
+    await pipeline(nodeStream, fileStream);
+
+    console.log('[api/mods/upload] File written to disk, creating Job in DB...');
     // Create a background job
     const job = await prisma.modJob.create({
       data: {
@@ -33,6 +42,8 @@ export async function POST(request: Request) {
         progress: 0,
       },
     });
+
+    console.log(`[api/mods/upload] Job created: ${job.id}`);
 
     // Trigger queue
     triggerQueue().catch(err => console.error("[api/mods/upload] Error triggering queue:", err));

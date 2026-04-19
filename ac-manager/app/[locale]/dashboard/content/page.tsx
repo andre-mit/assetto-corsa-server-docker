@@ -50,7 +50,7 @@ export default function ContentPage() {
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("/api/mods/job");
+      const res = await fetch(`/api/mods/job?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) {
         setJobs(data);
@@ -155,13 +155,14 @@ export default function ContentPage() {
       setUploadStatus("uploading");
       setUploadMessage(t("transferring"));
 
-      const formData = new FormData();
-      formData.append("modFile", file);
-
       try {
         const response = await fetch("/api/mods/upload", {
           method: "POST",
-          body: formData,
+          headers: { 
+            "x-filename": file.name,
+            "Content-Type": "application/octet-stream"
+          },
+          body: file, // Raw file streaming
         });
 
         const data = await response.json();
@@ -189,9 +190,15 @@ export default function ContentPage() {
   );
   
   const handleDownloadFromUrl = async () => {
-    if (!downloadUrl || !downloadUrl.startsWith("http")) {
+    let cleanUrl = downloadUrl.trim();
+    if (!cleanUrl) {
       toast.error(t("urlPlaceholder"));
       return;
+    }
+    
+    // Auto-prepend http if user just pastes a domain link
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = `https://${cleanUrl}`;
     }
 
     setIsUploading(true);
@@ -201,7 +208,7 @@ export default function ContentPage() {
       const response = await fetch("/api/mods/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: downloadUrl }),
+        body: JSON.stringify({ url: cleanUrl }),
       });
 
       const data = await response.json();

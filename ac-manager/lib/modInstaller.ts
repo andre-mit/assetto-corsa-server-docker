@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { analyzeExtractedMod, NormalizedMod } from './modAnalyzer';
+import { analyzeExtractedMod } from './modAnalyzer';
 import prisma from './prisma';
 
 const CONTENT_DIR = path.join(process.cwd(), 'game-content');
@@ -28,7 +28,7 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
 
   try {
     await fs.mkdir(TEMP_DIR, { recursive: true });
-    
+
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(extractPath, true);
 
@@ -42,7 +42,7 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
     for (const mod of mods) {
       const targetBaseDir = path.join(CONTENT_DIR, `${mod.type}s`);
       const targetDir = path.join(targetBaseDir, mod.id);
-      
+
       await fs.mkdir(targetBaseDir, { recursive: true });
       await fs.cp(mod.sourcePath, targetDir, { recursive: true, force: true });
 
@@ -64,10 +64,10 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
       }
 
       if (mod.type === 'track') {
-        const pitboxes = typeof mod.uiData.pitboxes === 'string' 
-          ? parseInt(mod.uiData.pitboxes, 10) 
+        const pitboxes = typeof mod.uiData.pitboxes === 'string'
+          ? parseInt(mod.uiData.pitboxes, 10)
           : (mod.uiData.pitboxes || 0);
-          
+
         await prisma.track.upsert({
           where: { folderName: mod.id },
           update: {

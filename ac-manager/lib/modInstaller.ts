@@ -8,13 +8,20 @@ import prisma from './prisma';
 const CONTENT_DIR = path.join(process.cwd(), 'game-content');
 const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
+// Format the endpoint correctly (AWS SDK crashes if a host:port doesn't have http://)
+let s3Endpoint = process.env.S3_ENDPOINT;
+if (s3Endpoint && !s3Endpoint.startsWith('http://') && !s3Endpoint.startsWith('https://')) {
+  s3Endpoint = `http://${s3Endpoint}`;
+}
+
 const s3 = new S3Client({
   region: process.env.S3_REGION || 'us-east-1',
-  endpoint: process.env.S3_ENDPOINT,
+  endpoint: s3Endpoint,
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY || '',
     secretAccessKey: process.env.S3_SECRET_KEY || '',
   },
+  forcePathStyle: true, // Often required for local/MinIO setups
 });
 
 export interface ModInstallationResult {

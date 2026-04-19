@@ -7,9 +7,20 @@ export async function POST(request: Request) {
     const { action } = body; // { action: 'start' | 'stop' | 'restart' }
     const container = await getAcContainer();
 
-    if (action === 'start') await container.start();
-    else if (action === 'stop') await container.stop();
-    else if (action === 'restart') await container.restart();
+    const DOCKER_ACTION_TIMEOUT = 12000; // 12 seconds for actions
+
+    const executeWithTimeout = async (actionPromise: Promise<any>, label: string) => {
+      return Promise.race([
+        actionPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout executing ${label} on Docker`)), DOCKER_ACTION_TIMEOUT)
+        )
+      ]);
+    };
+
+    if (action === 'start') await executeWithTimeout(container.start(), 'start');
+    else if (action === 'stop') await executeWithTimeout(container.stop(), 'stop');
+    else if (action === 'restart') await executeWithTimeout(container.restart(), 'restart');
     else return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
     console.log(`[api/server/control] Action '${action}' executed successfully on AC container`);

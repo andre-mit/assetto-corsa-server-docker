@@ -47,7 +47,7 @@ async function processJob(jobId: string) {
         prisma.modJob.update({
           where: { id: jobId },
           data: { progress },
-        }).catch(() => {});
+        }).catch(() => { });
       });
     } else {
       // UPLOAD - path is already in target
@@ -81,7 +81,7 @@ async function processJob(jobId: string) {
   } finally {
     // Ensure cleanup of the local temp file, whether success or failure
     if (localPath) {
-      await fs.rm(localPath, { force: true }).catch(() => {});
+      await fs.rm(localPath, { force: true }).catch(() => { });
     }
 
     activeJobs.delete(jobId);
@@ -93,13 +93,13 @@ function downloadFile(url: string, dest: string, onProgress: (p: number) => void
   return new Promise((resolve, reject) => {
     const request = https.get(url, (response) => {
       if (response.statusCode! >= 400) {
-          reject(new Error(`HTTP Error ${response.statusCode}`));
-          return;
+        reject(new Error(`HTTP Error ${response.statusCode}`));
+        return;
       }
-      
+
       const totalSize = parseInt(response.headers['content-length'] ?? '0', 10);
       let downloaded = 0;
-      
+
       const fileStream = createWriteStream(dest);
       response.pipe(fileStream);
 
@@ -114,11 +114,13 @@ function downloadFile(url: string, dest: string, onProgress: (p: number) => void
       fileStream.on('finish', () => {
         fileStream.close();
         resolve();
+        console.log("[modQueue] Download completed successfully");
       });
 
       fileStream.on('error', (err: Error) => {
-          fs.rm(dest, { force: true }).catch(() => {});
-          reject(err);
+        fs.rm(dest, { force: true }).catch(() => { });
+        reject(err);
+        console.error("[modQueue] Download error:", err.message || err);
       });
     });
 

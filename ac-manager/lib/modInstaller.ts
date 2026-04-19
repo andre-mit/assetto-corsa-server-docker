@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import AdmZip from 'adm-zip';
+import extract from 'extract-zip';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { analyzeExtractedMod } from './modAnalyzer';
 import prisma from './prisma';
@@ -36,8 +36,7 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
   try {
     await fs.mkdir(TEMP_DIR, { recursive: true });
 
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(extractPath, true);
+    await extract(zipPath, { dir: extractPath });
 
     const mods = await analyzeExtractedMod(extractPath);
 

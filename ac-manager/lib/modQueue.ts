@@ -119,7 +119,10 @@ async function downloadFile(url: string, dest: string, onProgress: (p: number) =
         onProgress(p);
       }
       
-      fileStream.write(value);
+      const canWrite = fileStream.write(value);
+      if (!canWrite) {
+        await new Promise<void>(resolve => fileStream.once('drain', resolve));
+      }
     }
     
     fileStream.end();

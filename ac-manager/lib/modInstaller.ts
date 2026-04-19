@@ -36,7 +36,17 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
   try {
     await fs.mkdir(TEMP_DIR, { recursive: true });
 
-    await extract(zipPath, { dir: extractPath });
+    try {
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      const execFileAsync = promisify(execFile);
+      
+      console.log(`[modInstaller] Attempting native unzip for ${zipPath}`);
+      await execFileAsync('unzip', ['-o', zipPath, '-d', extractPath]);
+    } catch (unzipErr) {
+      console.log(`[modInstaller] Native unzip failed or unavailable, falling back to extract-zip. Error:`, (unzipErr as Error).message);
+      await extract(zipPath, { dir: extractPath });
+    }
 
     const mods = await analyzeExtractedMod(extractPath);
 

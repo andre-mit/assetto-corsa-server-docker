@@ -1,7 +1,7 @@
 import prisma from "./prisma";
 import { installModFromZip } from "./modInstaller";
 import fs from "fs/promises";
-import { createWriteStream } from "fs";
+import fsSync from "fs";
 import https from "https";
 import path from "path";
 
@@ -89,41 +89,48 @@ async function processJob(jobId: string) {
   }
 }
 
-function downloadFile(url: string, dest: string, onProgress: (p: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = https.get(url, (response) => {
-      if (response.statusCode! >= 400) {
-        reject(new Error(`HTTP Error ${response.statusCode}`));
-        return;
+async function downloadFile(url: string, dest: string, onProgress: (p: number) => void): Promise<void> {
+  try {
+    const response = await fetch(url, { redirect: 'follow' });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP Error ${response.status} ${response.statusText}`);
+    }
+
+    const totalSize = parseInt(response.headers.get('content-length') ?? '0', 10);
+    let downloaded = 0;
+
+    const fileStream = fsSync.createWriteStream(dest);
+
+    if (!response.body) {
+      throw new Error('Response body is empty');
+    }
+
+    // Use web streams reader
+    const reader = response.body.getReader();
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      downloaded += value.length;
+      if (totalSize > 0) {
+        const p = Math.round((downloaded / totalSize) * 100);
+        onProgress(p);
       }
+      
+      fileStream.write(value);
+    }
+    
+    fileStream.end();
 
-      const totalSize = parseInt(response.headers['content-length'] ?? '0', 10);
-      let downloaded = 0;
-
-      const fileStream = createWriteStream(dest);
-      response.pipe(fileStream);
-
-      response.on('data', (chunk) => {
-        downloaded += chunk.length;
-        if (totalSize > 0) {
-          const p = Math.round((downloaded / totalSize) * 100);
-          onProgress(p);
-        }
-      });
-
-      fileStream.on('finish', () => {
-        fileStream.close();
-        resolve();
-        console.log("[modQueue] Download completed successfully");
-      });
-
-      fileStream.on('error', (err: Error) => {
-        fs.rm(dest, { force: true }).catch(() => { });
-        reject(err);
-        console.error("[modQueue] Download error:", err.message || err);
-      });
+    await new Promise<void>((resolve, reject) => {
+      fileStream.on('finish', () => resolve());
+      fileStream.on('error', (err) => reject(err));
     });
 
-    request.on('error', reject);
-  });
+  } catch (err) {
+    fsSync.rmSync(dest, { force: true });
+    throw err;
+  }
 }

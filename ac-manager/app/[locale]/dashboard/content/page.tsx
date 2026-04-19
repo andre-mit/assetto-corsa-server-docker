@@ -54,18 +54,18 @@ export default function ContentPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setJobs(data);
-        
+
         // Auto-track active jobs found in the list
         const activeIds = data
           .filter(j => ["PENDING", "DOWNLOADING", "EXTRACTING", "INGESTING"].includes(j.status))
           .map(j => j.id);
-        
+
         setActiveJobIds(prev => {
           const combined = Array.from(new Set([...prev, ...activeIds]));
           return combined;
         });
       }
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   useEffect(() => {
@@ -155,25 +155,48 @@ export default function ContentPage() {
       setUploadStatus("uploading");
       setUploadMessage(t("transferring"));
 
+      const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const uniqueUploadId = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      let lastResponseData = null;
+
       try {
-        const response = await fetch("/api/mods/upload", {
-          method: "POST",
-          headers: { 
-            "x-filename": file.name,
-            "Content-Type": "application/octet-stream"
-          },
-          body: file, // Raw file streaming
-        });
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+          const start = chunkIndex * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, file.size);
+          const chunk = file.slice(start, end);
 
-        const data = await response.json();
+          const formData = new FormData();
+          formData.append('chunk', chunk, file.name);
+          formData.append('filename', file.name);
+          formData.append('uploadId', uniqueUploadId);
+          formData.append('chunkIndex', chunkIndex.toString());
+          formData.append('totalChunks', totalChunks.toString());
 
-        if (response.ok && data.jobId) {
-          setActiveJobIds(prev => [...prev, data.jobId]);
+          const response = await fetch("/api/mods/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Chunk upload failed");
+          }
+          lastResponseData = data;
+
+          // Visual progress for the chunks specifically
+          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+          setUploadMessage(`${t("transferring")} ${progress}%`);
+        }
+
+        if (lastResponseData && lastResponseData.jobId) {
+          setActiveJobIds(prev => [...prev, lastResponseData.jobId]);
           setUploadStatus("success");
           setUploadMessage(t("success"));
         } else {
           setUploadStatus("error");
-          setUploadMessage(data.error || t("installError"));
+          setUploadMessage(t("installError"));
         }
       } catch (err: unknown) {
         setUploadStatus("error");
@@ -188,14 +211,14 @@ export default function ContentPage() {
     },
     [t],
   );
-  
+
   const handleDownloadFromUrl = async () => {
     let cleanUrl = downloadUrl.trim();
     if (!cleanUrl) {
       toast.error(t("urlPlaceholder"));
       return;
     }
-    
+
     // Auto-prepend http if user just pastes a domain link
     if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
       cleanUrl = `https://${cleanUrl}`;
@@ -203,7 +226,7 @@ export default function ContentPage() {
 
     setIsUploading(true);
     setUploadStatus("processing");
-    
+
     try {
       const response = await fetch("/api/mods/download", {
         method: "POST",
@@ -267,11 +290,10 @@ export default function ContentPage() {
           <CardContent className="p-0">
             <div
               {...getRootProps()}
-              className={`flex flex-col items-center justify-center py-12 px-4 text-center cursor-pointer transition-colors duration-200 ${
-                isDragActive
+              className={`flex flex-col items-center justify-center py-12 px-4 text-center cursor-pointer transition-colors duration-200 ${isDragActive
                   ? "bg-primary/10 border-primary"
                   : "hover:bg-muted/50"
-              } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
+                } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
             >
               <input {...getInputProps()} />
 
@@ -351,8 +373,8 @@ export default function ContentPage() {
                 disabled={isUploading}
                 className="bg-background"
               />
-              <Button 
-                onClick={handleDownloadFromUrl} 
+              <Button
+                onClick={handleDownloadFromUrl}
                 disabled={isUploading || !downloadUrl}
                 className="shrink-0"
               >

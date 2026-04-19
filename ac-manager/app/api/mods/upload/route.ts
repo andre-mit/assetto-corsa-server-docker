@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
-import { pipeline } from 'stream/promises';
-import { Readable } from 'stream';
-import { promisify } from 'util';
 import path from 'path';
 import prisma from '@/lib/prisma';
 import { triggerQueue } from '@/lib/modQueue';
@@ -11,47 +8,56 @@ const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
 export async function POST(request: Request) {
   try {
-    console.log('[api/mods/upload] Received upload request');
-    const filename = request.headers.get('x-filename');
+    const formData = await request.formData();
+    const chunk = formData.get('chunk') as File | null;
+    const filename = formData.get('filename') as string | null;
+    const uploadId = formData.get('uploadId') as string | null;
+    const chunkIndex = parseInt(formData.get('chunkIndex') as string, 10);
+    const totalChunks = parseInt(formData.get('totalChunks') as string, 10);
 
-    if (!filename || !request.body) {
-      console.log('[api/mods/upload] Missing file or filename headers');
-      return NextResponse.json({ error: 'No file provided or missing custom headers.' }, { status: 400 });
+    if (!chunk || !filename || !uploadId) {
+      return NextResponse.json({ error: 'Missing chunk data or identifiers.' }, { status: 400 });
     }
 
     await fs.promises.mkdir(TEMP_DIR, { recursive: true });
     
-    const tempZipPath = path.join(TEMP_DIR, `upload_${Date.now()}_${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`);
-    console.log(`[api/mods/upload] Streaming upload to ${tempZipPath}`);
-
-    // Stream the body directly to a file using Node's stream pipeline
-    const fileStream = fs.createWriteStream(tempZipPath);
+    // Ensure safe filename pattern
+    const safeUploadId = uploadId.replace(/[^a-zA-Z0-9.-_]/g, '');
+    const tempZipPath = path.join(TEMP_DIR, `upload_${safeUploadId}.zip`);
     
-    // Convert Web ReadableStream to Node Readable
-    const nodeStream = Readable.fromWeb(request.body as import('stream/web').ReadableStream);
-    
-    await pipeline(nodeStream, fileStream);
+    // Append chunk to the file
+    // We expect sequential chunks because the client awaits each fetch.
+    const buffer = Buffer.from(await chunk.arrayBuffer());
+    await fs.promises.appendFile(tempZipPath, buffer);
 
-    console.log('[api/mods/upload] File written to disk, creating Job in DB...');
-    // Create a background job
-    const job = await prisma.modJob.create({
-      data: {
-        type: 'UPLOAD',
-        target: tempZipPath,
-        status: 'PENDING',
-        progress: 0,
-      },
-    });
+    console.log(`[api/mods/upload] Received chunk ${chunkIndex + 1}/${totalChunks} for ${filename}`);
 
-    console.log(`[api/mods/upload] Job created: ${job.id}`);
+    // If this is the last chunk, process it as a ModJob
+    if (chunkIndex === totalChunks - 1) {
+      console.log(`[api/mods/upload] File complete on disk: ${tempZipPath}. Creating DB Job...`);
+      const job = await prisma.modJob.create({
+        data: {
+          type: 'UPLOAD',
+          target: tempZipPath,
+          status: 'PENDING',
+          progress: 0,
+        },
+      });
 
-    // Trigger queue
-    triggerQueue().catch(err => console.error("[api/mods/upload] Error triggering queue:", err));
+      console.log(`[api/mods/upload] Job created: ${job.id}`);
+      triggerQueue().catch(err => console.error("[api/mods/upload] Error triggering queue:", err));
 
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Upload processing queued.',
+        jobId: job.id 
+      });
+    }
+
+    // Success for intermediate chunk
     return NextResponse.json({ 
       success: true, 
-      message: 'Upload processing queued.',
-      jobId: job.id 
+      message: `Chunk ${chunkIndex + 1} received` 
     });
 
   } catch (err: unknown) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Play, Square, RotateCw, LogOut, User } from "lucide-react";
+import { useEventSource } from "@/hooks/useEventSource";
 
 interface AuthUser {
   id: string;
@@ -22,21 +23,12 @@ export function ServerStatusBar() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const checkStatus = async () => {
-    try {
-      const res = await fetch("/api/server/status");
-      const data = await res.json();
-      setStatus(data.Status === "running" ? "running" : "stopped");
-    } catch {
-      setStatus("stopped");
-    }
-  };
-
-  useEffect(() => {
-    checkStatus();
-    const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // SSE: receive server status updates in real-time
+  useEventSource({
+    onServerStatus: (data) => {
+      setStatus(data.status === "running" ? "running" : "stopped");
+    },
+  });
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -53,7 +45,6 @@ export function ServerStatusBar() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      setTimeout(checkStatus, 2000);
     } catch (err) {
       console.error("Error controlling server", err);
     } finally {

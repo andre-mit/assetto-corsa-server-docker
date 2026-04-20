@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAcContainer } from '@/lib/docker';
+import eventBus from '@/lib/eventBus';
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
     else return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
     console.log(`[api/server/control] Action '${action}' executed successfully on AC container`);
+
+    // Push the new status immediately to all SSE clients
+    const newStatus = action === 'stop' ? 'stopped' : 'running';
+    eventBus.emitServerStatus({ status: newStatus as 'running' | 'stopped' });
+
     return NextResponse.json({ success: true, action });
   } catch (err: unknown) {
     const error = err as Error;

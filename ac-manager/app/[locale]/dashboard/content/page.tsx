@@ -30,6 +30,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Track, Car } from "@/types/ac-server";
+import { useEventSource } from "@/hooks/useEventSource";
 
 export default function ContentPage() {
   const t = useTranslations("Content");
@@ -50,63 +51,43 @@ export default function ContentPage() {
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch(`/api/mods/job?t=${Date.now()}`, { cache: "no-store" });
+      const res = await fetch(`/api/mods/job`, { cache: "no-store" });
       const data = await res.json();
       if (Array.isArray(data)) {
         setJobs(data);
-
-        // Auto-track active jobs found in the list
-        const activeIds = data
-          .filter(j => ["PENDING", "DOWNLOADING", "EXTRACTING", "INGESTING"].includes(j.status))
-          .map(j => j.id);
-
-        setActiveJobIds(prev => {
-          const combined = Array.from(new Set([...prev, ...activeIds]));
-          return combined;
-        });
       }
     } catch (e) { }
   }, []);
 
   useEffect(() => {
+    // Initial fetch
     fetchJobs();
-    const interval = setInterval(fetchJobs, 10000); // Background refresh every 10s
-    return () => clearInterval(interval);
   }, [fetchJobs]);
 
-  useEffect(() => {
-    if (activeJobIds.length === 0) return;
+  useEventSource({
+    onJobUpdate: (updatedJob) => {
+      setJobs((prevJobs) => {
+        const jobIndex = prevJobs.findIndex((j) => j.id === updatedJob.id);
+        const newJobs = [...prevJobs];
 
-    const interval = setInterval(async () => {
-      const updatedJobIds = [...activeJobIds];
-      const newJobs: any[] = [];
-
-      for (let i = updatedJobIds.length - 1; i >= 0; i--) {
-        const id = updatedJobIds[i];
-        try {
-          const res = await fetch(`/api/mods/job/${id}`);
-          const job = await res.json();
-          newJobs.push(job);
-
-          if (job.status === "SUCCESS" || job.status === "FAILED") {
-            updatedJobIds.splice(i, 1);
-            if (job.status === "SUCCESS") {
-              toast.success(t("success"));
-              fetchData();
-            } else {
-              toast.error(`${t("installError")}: ${job.error}`);
-            }
-          }
-        } catch (e) {
-          updatedJobIds.splice(i, 1);
+        if (jobIndex > -1) {
+          newJobs[jobIndex] = { ...newJobs[jobIndex], ...updatedJob };
+        } else {
+          newJobs.unshift(updatedJob);
         }
-      }
-      setJobs(newJobs);
-      setActiveJobIds(updatedJobIds);
-    }, 2000);
 
-    return () => clearInterval(interval);
-  }, [activeJobIds, t]);
+        // Show toast notifications on completion
+        if (updatedJob.status === "SUCCESS") {
+          toast.success(t("success"));
+          fetchData(); // Refresh tracks and cars
+        } else if (updatedJob.status === "FAILED") {
+          toast.error(`${t("installError")}: ${updatedJob.error}`);
+        }
+
+        return newJobs;
+      });
+    },
+  });
 
   const handleSyncBaseContent = async () => {
     setIsSyncing(true);

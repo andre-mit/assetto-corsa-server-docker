@@ -1,8 +1,8 @@
 import prisma from "./prisma";
 import { installModFromZip } from "./modInstaller";
+import eventBus from "./eventBus";
 import fs from "fs/promises";
 import fsSync from "fs";
-import https from "https";
 import path from "path";
 
 const CONCURRENCY_LIMIT = 2; // User requested 2-3
@@ -38,6 +38,7 @@ async function processJob(jobId: string) {
         where: { id: jobId },
         data: { status: "DOWNLOADING", progress: 0 },
       });
+      eventBus.emitJobUpdate({ id: jobId, status: "DOWNLOADING", progress: 0, type: job.type, target: job.target ?? undefined });
 
       const TEMP_DIR = path.join(process.cwd(), "tmp");
       await fs.mkdir(TEMP_DIR, { recursive: true });
@@ -48,6 +49,7 @@ async function processJob(jobId: string) {
           where: { id: jobId },
           data: { progress },
         }).catch(() => { });
+        eventBus.emitJobUpdate({ id: jobId, status: "DOWNLOADING", progress, type: job.type, target: job.target ?? undefined });
       });
     } else {
       // UPLOAD - path is already in target
@@ -58,6 +60,7 @@ async function processJob(jobId: string) {
       where: { id: jobId },
       data: { status: "EXTRACTING", progress: 0 },
     });
+    eventBus.emitJobUpdate({ id: jobId, status: "EXTRACTING", progress: 0 });
 
     const result = await installModFromZip(localPath);
 
@@ -69,6 +72,7 @@ async function processJob(jobId: string) {
         result: result as any,
       },
     });
+    eventBus.emitJobUpdate({ id: jobId, status: "SUCCESS", progress: 100, result });
 
     console.log(`[modQueue] Job ${jobId} completed successfully`);
   } catch (err: unknown) {
@@ -78,6 +82,7 @@ async function processJob(jobId: string) {
       where: { id: jobId },
       data: { status: "FAILED", error: error.message || "Unknown error" },
     });
+    eventBus.emitJobUpdate({ id: jobId, status: "FAILED", progress: 0, error: error.message || "Unknown error" });
   } finally {
     if (localPath) {
       await fs.rm(localPath, { force: true }).catch(() => { });

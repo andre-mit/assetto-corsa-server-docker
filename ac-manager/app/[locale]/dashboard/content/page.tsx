@@ -13,6 +13,8 @@ import {
   Car as CarIcon,
   MapPin,
   Link,
+  X,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +24,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -41,7 +45,7 @@ export default function ContentPage() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [activeJobIds, setActiveJobIds] = useState<string[]>([]);
+  const [showLimitedJobs, setShowLimitedJobs] = useState(true);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<
@@ -59,6 +63,27 @@ export default function ContentPage() {
       }
     } catch (e) { }
   }, []);
+
+  const handleClearCompleted = async () => {
+    try {
+      const res = await fetch(`/api/mods/job/manage`, { method: "DELETE" });
+      if (res.ok) fetchJobs();
+    } catch (e) { }
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    try {
+      const res = await fetch(`/api/mods/job/${id}`, { method: "DELETE" });
+      if (res.ok) fetchJobs();
+    } catch (e) { }
+  };
+
+  const handleCancelJob = async (id: string) => {
+    try {
+      const res = await fetch(`/api/mods/job/${id}`, { method: "PATCH" });
+      if (res.ok) fetchJobs();
+    } catch (e) { }
+  };
 
   useEffect(() => {
     fetchJobs();
@@ -78,7 +103,14 @@ export default function ContentPage() {
 
         if (updatedJob.status === "SUCCESS") {
           toast.success(t("success"));
-          fetchData();
+          
+          // To prevent aggressive database hits on multi-drop (50 files), 
+          // we ONLY fetch cars and tracks if no other job is pending.
+          const activeJobsRemaining = newJobs.filter(j => ['PENDING', 'DOWNLOADING', 'EXTRACTING', 'INGESTING'].includes(j.status)).length;
+          
+          if (activeJobsRemaining === 0 && !isUploading) {
+            fetchData();
+          }
         } else if (updatedJob.status === "FAILED") {
           toast.error(`${t("installError")}: ${updatedJob.error}`);
         }
@@ -246,7 +278,6 @@ export default function ContentPage() {
       const data = await response.json();
 
       if (response.ok && data.jobId) {
-        setActiveJobIds(prev => [...prev, data.jobId]);
         setUploadStatus("success");
         setDownloadUrl("");
       } else {
@@ -403,33 +434,68 @@ export default function ContentPage() {
         </Card>
       </div>
 
-      {jobs.length > 0 && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin" /> {t("activeJobs")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 pt-0 space-y-4">
-            {jobs.map((job) => (
-              <div key={job.id} className="space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={job.status === "FAILED" ? "destructive" : "outline"}>
-                      {t(`jobStatus.${job.status}`)}
-                    </Badge>
-                    <span className="text-muted-foreground max-w-[200px] truncate">
-                      {job.type === "DOWNLOAD" ? job.target : "ZIP Upload"}
-                    </span>
+      {jobs.length > 0 && (() => {
+        const displayedJobs = showLimitedJobs ? jobs.slice(0, 3) : jobs;
+        return (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="py-4">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" /> {t("activeJobs")}
+                </CardTitle>
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-2 cursor-pointer">
+                    <Switch
+                      checked={showLimitedJobs}
+                      onCheckedChange={setShowLimitedJobs}
+                      id="limit-jobs"
+                    />
+                    <Label htmlFor="limit-jobs" className="cursor-pointer text-muted-foreground">Exibir apenas 3 recentes</Label>
                   </div>
-                  <span className="font-mono">{job.progress}%</span>
+                  <Button variant="outline" size="sm" onClick={handleClearCompleted} className="h-7 text-xs">
+                    <Trash2 className="w-3 h-3 mr-2" />
+                    Limpar Concluídos
+                  </Button>
                 </div>
-                <Progress value={job.progress} className="h-1" />
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            </CardHeader>
+            <CardContent className="pb-4 pt-0 space-y-4">
+              {displayedJobs.map((job) => (
+                <div key={job.id} className="space-y-2 group">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={job.status === "FAILED" ? "destructive" : (job.status === "SUCCESS" ? "default" : "outline")}>
+                        {t(`jobStatus.${job.status}`)}
+                      </Badge>
+                      <span className="text-muted-foreground max-w-[200px] truncate">
+                        {job.type === "DOWNLOAD" ? job.target : "ZIP Upload"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono">{job.progress}%</span>
+                      {['SUCCESS', 'FAILED', 'CANCELLED'].includes(job.status) ? (
+                        <button onClick={() => handleDeleteJob(job.id)} className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="Apagar Registro">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button onClick={() => handleCancelJob(job.id)} className="text-muted-foreground hover:text-warning opacity-0 group-hover:opacity-100 transition-opacity" title="Cancelar Job">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <Progress value={job.progress} className="h-1" />
+                </div>
+              ))}
+              {showLimitedJobs && jobs.length > 3 && (
+                <div className="text-center text-xs text-muted-foreground pt-2">
+                  + {jobs.length - 3} itens ocultos
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {isLoading ? (
         <div className="flex justify-center py-12">

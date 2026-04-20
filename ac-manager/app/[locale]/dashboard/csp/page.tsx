@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Save, Loader2, CloudRain, Sun, Moon, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +38,7 @@ export default function CSPPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cspCfg: config }),
       });
-      
+
       if (res.ok) {
         alert("Configurações do CSP guardadas! Reinicie o servidor para aplicar a chuva/clima.");
       }
@@ -52,8 +51,8 @@ export default function CSPPage() {
   };
 
   const updateSectionValue = <T extends keyof AcCspConfig, K extends keyof AcCspConfig[T]>(
-    section: T, 
-    key: K, 
+    section: T,
+    key: K,
     value: AcCspConfig[T][K]
   ) => {
     setConfig((prev: AcCspConfig | null) => {
@@ -100,7 +99,7 @@ export default function CSPPage() {
                   <Label className="text-base">Ativar Chuva no Servidor</Label>
                   <p className="text-sm text-muted-foreground">Permite que o servidor controle o nível de água na pista.</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={config.RAIN?.ENABLE === true}
                   onCheckedChange={(checked) => updateSectionValue('RAIN', 'ENABLE', checked)}
                 />
@@ -113,11 +112,11 @@ export default function CSPPage() {
                       <span>Intensidade da Chuva</span>
                       <span className="text-muted-foreground">{Math.round((config.RAIN?.INTENSITY || 0) * 100)}%</span>
                     </Label>
-                    <Slider 
-                      value={[config.RAIN?.INTENSITY || 0]} 
-                      max={1} 
-                      step={0.05} 
-                      onValueChange={(val) => updateSectionValue('RAIN', 'INTENSITY', val[0])} 
+                    <Slider
+                      value={[config.RAIN?.INTENSITY || 0]}
+                      max={1}
+                      step={0.05}
+                      onValueChange={(val) => updateSectionValue('RAIN', 'INTENSITY', val[0])}
                     />
                   </div>
                   <div className="space-y-4">
@@ -125,11 +124,11 @@ export default function CSPPage() {
                       <span>Nível de Água na Pista (Poças)</span>
                       <span className="text-muted-foreground">{Math.round((config.RAIN?.WETNESS || 0) * 100)}%</span>
                     </Label>
-                    <Slider 
-                      value={[config.RAIN?.WETNESS || 0]} 
-                      max={1} 
-                      step={0.05} 
-                      onValueChange={(val) => updateSectionValue('RAIN', 'WETNESS', val[0])} 
+                    <Slider
+                      value={[config.RAIN?.WETNESS || 0]}
+                      max={1}
+                      step={0.05}
+                      onValueChange={(val) => updateSectionValue('RAIN', 'WETNESS', val[0])}
                     />
                   </div>
                 </div>
@@ -137,8 +136,8 @@ export default function CSPPage() {
 
               <div className="space-y-2 pt-4">
                 <Label>Script de Clima</Label>
-                <Select 
-                  value={config.WEATHER?.SCRIPT || 'sol'} 
+                <Select
+                  value={config.WEATHER?.SCRIPT || 'sol'}
                   onValueChange={(val) => updateSectionValue('WEATHER', 'SCRIPT', val)}
                 >
                   <SelectTrigger className="w-[280px]">
@@ -168,12 +167,12 @@ export default function CSPPage() {
                   <span>Velocidade da passagem do tempo</span>
                   <span className="font-bold text-primary">{config.TIME?.MULTIPLIER || 1}x</span>
                 </Label>
-                <Slider 
-                  value={[config.TIME?.MULTIPLIER || 1]} 
+                <Slider
+                  value={[config.TIME?.MULTIPLIER || 1]}
                   min={1}
-                  max={60} 
-                  step={1} 
-                  onValueChange={(val) => updateSectionValue('TIME', 'MULTIPLIER', val[0])} 
+                  max={60}
+                  step={1}
+                  onValueChange={(val) => updateSectionValue('TIME', 'MULTIPLIER', val[0])}
                   className="py-4"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -196,7 +195,7 @@ export default function CSPPage() {
                   <Label className="text-base">Teleportar para as Boxes se for em contramão</Label>
                   <p className="text-sm text-muted-foreground">Evita jogadores intencionalmente a arruinar corridas (Trolls).</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={config.PITS?.TELEPORT_TO_PITS_ON_WRONG_WAY === true}
                   onCheckedChange={(checked) => updateSectionValue('PITS', 'TELEPORT_TO_PITS_ON_WRONG_WAY', checked)}
                 />
@@ -207,7 +206,7 @@ export default function CSPPage() {
                   <Label className="text-base">Permitir conduzir na contramão nas boxes</Label>
                   <p className="text-sm text-muted-foreground">Útil em pistas de Track Day onde os jogadores gostam de manobrar nas boxes.</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={config.PITS?.ALLOW_TO_DRIVE_BACK === true}
                   onCheckedChange={(checked) => updateSectionValue('PITS', 'ALLOW_TO_DRIVE_BACK', checked)}
                 />

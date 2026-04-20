@@ -79,7 +79,6 @@ async function processJob(jobId: string) {
       data: { status: "FAILED", error: error.message || "Unknown error" },
     });
   } finally {
-    // Ensure cleanup of the local temp file, whether success or failure
     if (localPath) {
       await fs.rm(localPath, { force: true }).catch(() => { });
     }
@@ -93,7 +92,7 @@ async function downloadFile(url: string, dest: string, onProgress: (p: number) =
   const { spawn } = await import('child_process');
 
   return new Promise((resolve, reject) => {
-    const child = spawn('curl', ['-L', '-#', '-o', dest, url]);
+    const child = spawn('curl', ['-f', '-L', '-#', '-o', dest, url]);
 
     let lastProgress = -1;
 

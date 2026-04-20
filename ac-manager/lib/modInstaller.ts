@@ -40,11 +40,11 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
       const { execFile } = await import('child_process');
       const { promisify } = await import('util');
       const execFileAsync = promisify(execFile);
-      
-      console.log(`[modInstaller] Attempting native unzip for ${zipPath}`);
-      await execFileAsync('unzip', ['-o', zipPath, '-d', extractPath]);
+
+      console.log(`[modInstaller] Attempting native extraction (7z) for ${zipPath}`);
+      await execFileAsync('7z', ['x', zipPath, '-y', `-o${extractPath}`]);
     } catch (unzipErr) {
-      console.log(`[modInstaller] Native unzip failed or unavailable, falling back to extract-zip. Error:`, (unzipErr as Error).message);
+      console.log(`[modInstaller] Native 7z extraction failed, falling back to extract-zip. Error:`, (unzipErr as Error).message);
       await extract(zipPath, { dir: extractPath });
     }
 
@@ -76,13 +76,13 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
           }));
 
           let baseUrl = process.env.S3_PUBLIC_URL;
-          
+
           if (baseUrl) {
             // Automatically append the bucket name if it's missing (very common with MinIO)
             if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
-               baseUrl = baseUrl.endsWith('/') 
-                 ? `${baseUrl}${process.env.S3_BUCKET_NAME}` 
-                 : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
+              baseUrl = baseUrl.endsWith('/')
+                ? `${baseUrl}${process.env.S3_BUCKET_NAME}`
+                : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
             }
             s3Url = `${baseUrl}/${s3Key}`;
           } else {

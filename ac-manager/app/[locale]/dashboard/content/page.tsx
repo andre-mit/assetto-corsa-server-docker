@@ -261,6 +261,9 @@ export default function ContentPage() {
     accept: {
       "application/zip": [".zip"],
       "application/x-zip-compressed": [".zip"],
+      "application/vnd.rar": [".rar"],
+      "application/x-rar-compressed": [".rar"],
+      "application/x-7z-compressed": [".7z"],
     },
     maxFiles: 1,
     disabled: isUploading,

@@ -29,8 +29,9 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Track, Car } from "@/types/ac-server";
+import { Track, Car, Job } from "@/types/ac-server";
 import { useEventSource } from "@/hooks/useEventSource";
+import { UploadResponse } from "@/app/api/mods/upload/route";
 
 export default function ContentPage() {
   const t = useTranslations("Content");
@@ -39,7 +40,7 @@ export default function ContentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [activeJobIds, setActiveJobIds] = useState<string[]>([]);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -60,7 +61,6 @@ export default function ContentPage() {
   }, []);
 
   useEffect(() => {
-    // Initial fetch
     fetchJobs();
   }, [fetchJobs]);
 
@@ -128,71 +128,86 @@ export default function ContentPage() {
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
 
       setIsUploading(true);
-      setUploadStatus("uploading");
-      setUploadMessage(t("transferring"));
 
       const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks to stay well below Next.js 10MB limit
-      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-      const uniqueUploadId = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-      let lastResponseData: any = null;
 
       try {
-        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-          const start = chunkIndex * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, file.size);
-          const chunk = file.slice(start, end);
+        let currentFileIndex = 0;
+        const successfulJobs: string[] = [];
 
-          let retries = 3;
-          let success = false;
+        for (const file of acceptedFiles) {
+          currentFileIndex++;
+          setUploadStatus("uploading");
+          setUploadMessage(`${t("transferring")} (${currentFileIndex}/${acceptedFiles.length})`);
 
-          while (retries > 0 && !success) {
-            try {
-              const response = await fetch("/api/mods/upload", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/octet-stream",
-                  "x-upload-id": uniqueUploadId,
-                  "x-chunk-index": chunkIndex.toString(),
-                  "x-total-chunks": totalChunks.toString(),
-                  "x-file-name": encodeURIComponent(file.name),
-                },
-                body: chunk,
-              });
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          const uniqueUploadId = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-              const data = await response.json();
-              if (!response.ok) {
-                throw new Error(data.error || "Chunk upload failed");
+          let lastResponseData: UploadResponse | null = null;
+
+          for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            let retries = 3;
+            let success = false;
+
+            while (retries > 0 && !success) {
+              try {
+                const response = await fetch("/api/mods/upload", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/octet-stream",
+                    "x-upload-id": uniqueUploadId,
+                    "x-chunk-index": chunkIndex.toString(),
+                    "x-total-chunks": totalChunks.toString(),
+                    "x-file-name": encodeURIComponent(file.name),
+                  },
+                  body: chunk,
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                  throw new Error(data.error || "Chunk upload failed");
+                }
+                lastResponseData = data;
+                success = true;
+              } catch (err) {
+                retries--;
+                if (retries === 0) {
+                  throw err;
+                }
+                // Wait 2 seconds before retrying this chunk to allow the server's I/O to breathe
+                await new Promise((resolve) => setTimeout(resolve, 2000));
               }
-              lastResponseData = data;
-              success = true;
-            } catch (err) {
-              retries--;
-              if (retries === 0) {
-                throw err;
-              }
-              // Wait 2 seconds before retrying this chunk to allow the server's I/O to breathe
-              await new Promise((resolve) => setTimeout(resolve, 2000));
             }
+
+            // Visual progress for the chunks specifically
+            const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+            setUploadMessage(`[${currentFileIndex}/${acceptedFiles.length}] ${file.name} - ${progress}%`);
           }
 
-          // Visual progress for the chunks specifically
-          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-          setUploadMessage(`${t("transferring")} ${progress}%`);
+          if (lastResponseData && lastResponseData.jobId) {
+            successfulJobs.push(lastResponseData.jobId);
+          } else {
+            toast.error(`${t("installError")}: ${file.name}`);
+          }
         }
 
-        if (lastResponseData && lastResponseData.jobId) {
-          setActiveJobIds(prev => [...prev, lastResponseData.jobId]);
+        // All files finished their chunk loops
+        if (successfulJobs.length > 0) {
+          // If the page still tracked them visually, it's done via SSE so we just reset UI.
           setUploadStatus("success");
           setUploadMessage(t("success"));
         } else {
           setUploadStatus("error");
           setUploadMessage(t("installError"));
         }
+
       } catch (err: unknown) {
         setUploadStatus("error");
         setUploadMessage(t("connError"));
@@ -259,7 +274,6 @@ export default function ContentPage() {
       "application/x-rar-compressed": [".rar"],
       "application/x-7z-compressed": [".7z"],
     },
-    maxFiles: 1,
     disabled: isUploading,
   });
 

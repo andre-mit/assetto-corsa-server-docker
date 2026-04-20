@@ -32,7 +32,7 @@ export interface AcServerConfig {
     LOCKED_ENTRY_LIST: 0 | 1;
     LOOP_MODE: 0 | 1;
     REGISTER_TO_LOBBY: 0 | 1;
-    
+
     TC_ALLOWED: 0 | 1 | 2;
     ABS_ALLOWED: 0 | 1 | 2;
     STABILITY_ALLOWED: 0 | 1;
@@ -72,9 +72,9 @@ export interface AcEntryListSlot {
   SPECTATOR_MODE: 0 | 1;
   DRIVERNAME?: string;
   TEAM?: string;
-  GUID?: string; 
-  BALLAST: number; 
-  RESTRICTOR: number; 
+  GUID?: string;
+  BALLAST: number;
+  RESTRICTOR: number;
 }
 
 export type AcEntryList = Record<string, AcEntryListSlot>;
@@ -97,6 +97,17 @@ export interface Car {
   isMod: boolean;
   s3ImageUrl: string | null;
   createdAt: string | Date;
+}
+
+export type Job = {
+  id: string;
+  type: string;
+  target: string;
+  status: string;
+  progress: number;
+  error: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CarUIData {

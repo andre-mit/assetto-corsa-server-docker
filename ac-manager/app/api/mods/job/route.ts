@@ -6,12 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Trigger queue just in case some jobs are stuck
     triggerQueue().catch(err => console.error("[api/mods/job/list] Error triggering queue:", err));
 
-    // Fetch active or recent jobs (last 24h)
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
+
     const jobs = await prisma.modJob.findMany({
       where: {
         OR: [

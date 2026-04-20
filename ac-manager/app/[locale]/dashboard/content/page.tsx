@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -13,6 +13,7 @@ import {
   Car as CarIcon,
   MapPin,
   Link,
+  Search,
   X,
   Trash2,
 } from "lucide-react";
@@ -33,9 +34,11 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Track, Car, Job } from "@/types/ac-server";
+import { Track, Car, Job, Brand } from "@/types/ac-server";
 import { useEventSource } from "@/hooks/useEventSource";
 import { UploadResponse } from "@/app/api/mods/upload/route";
+import { getCountryFlag } from "@/lib/countryFlag";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export default function ContentPage() {
   const t = useTranslations("Content");
@@ -54,6 +57,12 @@ export default function ContentPage() {
   const [uploadMessage, setUploadMessage] = useState("");
   const [downloadUrl, setDownloadUrl] = useState("");
 
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [carSearch, setCarSearch] = useState("");
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [trackSearch, setTrackSearch] = useState("");
+
   const fetchJobs = useCallback(async () => {
     try {
       const res = await fetch(`/api/mods/job`, { cache: "no-store" });
@@ -61,28 +70,28 @@ export default function ContentPage() {
       if (Array.isArray(data)) {
         setJobs(data);
       }
-    } catch (e) { }
+    } catch { }
   }, []);
 
   const handleClearCompleted = async () => {
     try {
       const res = await fetch(`/api/mods/job/manage`, { method: "DELETE" });
       if (res.ok) fetchJobs();
-    } catch (e) { }
+    } catch { }
   };
 
   const handleDeleteJob = async (id: string) => {
     try {
       const res = await fetch(`/api/mods/job/${id}`, { method: "DELETE" });
       if (res.ok) fetchJobs();
-    } catch (e) { }
+    } catch { }
   };
 
   const handleCancelJob = async (id: string) => {
     try {
       const res = await fetch(`/api/mods/job/${id}`, { method: "PATCH" });
       if (res.ok) fetchJobs();
-    } catch (e) { }
+    } catch { }
   };
 
   useEffect(() => {
@@ -103,11 +112,11 @@ export default function ContentPage() {
 
         if (updatedJob.status === "SUCCESS") {
           toast.success(t("success"));
-          
+
           // To prevent aggressive database hits on multi-drop (50 files), 
           // we ONLY fetch cars and tracks if no other job is pending.
           const activeJobsRemaining = newJobs.filter(j => ['PENDING', 'DOWNLOADING', 'EXTRACTING', 'INGESTING'].includes(j.status)).length;
-          
+
           if (activeJobsRemaining === 0 && !isUploading) {
             fetchData();
           }
@@ -141,12 +150,15 @@ export default function ContentPage() {
 
   const fetchData = async () => {
     try {
-      const [tracksRes, carsRes] = await Promise.all([
+      const [tracksRes, carsRes, brandsRes] = await Promise.all([
         fetch("/api/content/tracks"),
         fetch("/api/content/cars"),
+        fetch("/api/content/brands"),
       ]);
       setTracks(await tracksRes.json());
       setCars(await carsRes.json());
+      const brandsData = await brandsRes.json();
+      if (Array.isArray(brandsData)) setBrands(brandsData);
     } catch (error) {
       console.error("Error loading content:", error);
     } finally {
@@ -157,6 +169,52 @@ export default function ContentPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const filteredCars = useMemo(() => {
+    let result = cars;
+    if (carSearch) {
+      const term = carSearch.toLowerCase();
+      result = result.filter(
+        (c) => c.name.toLowerCase().includes(term) || c.folderName.toLowerCase().includes(term) || (c.brand && c.brand.toLowerCase().includes(term))
+      );
+    }
+    if (selectedBrands.length > 0) {
+      result = result.filter((c) => c.brand && selectedBrands.includes(c.brand));
+    }
+    return result;
+  }, [cars, carSearch, selectedBrands]);
+
+  const uniqueCountries = useMemo(() => {
+    const countrySet = new Set<string>();
+    let hasNull = false;
+    for (const track of tracks) {
+      if (track.country) {
+        countrySet.add(track.country);
+      } else {
+        hasNull = true;
+      }
+    }
+    const sorted = Array.from(countrySet).sort();
+    if (hasNull) sorted.push("__others");
+    return sorted;
+  }, [tracks]);
+
+  const filteredTracks = useMemo(() => {
+    let result = tracks;
+    if (trackSearch) {
+      const term = trackSearch.toLowerCase();
+      result = result.filter(
+        (t) => t.name.toLowerCase().includes(term) || t.folderName.toLowerCase().includes(term)
+      );
+    }
+    if (selectedCountries.length > 0) {
+      result = result.filter((t) => {
+        if (selectedCountries.includes("__others") && !t.country) return true;
+        return t.country && selectedCountries.includes(t.country);
+      });
+    }
+    return result;
+  }, [tracks, trackSearch, selectedCountries]);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -240,7 +298,7 @@ export default function ContentPage() {
           setUploadMessage(t("installError"));
         }
 
-      } catch (err: unknown) {
+      } catch {
         setUploadStatus("error");
         setUploadMessage(t("connError"));
       } finally {
@@ -284,7 +342,7 @@ export default function ContentPage() {
         setUploadStatus("error");
         setUploadMessage(data.error || t("installError"));
       }
-    } catch (err: unknown) {
+    } catch {
       setUploadStatus("error");
       setUploadMessage(t("connError"));
     } finally {
@@ -506,17 +564,94 @@ export default function ContentPage() {
           <div className="flex items-center justify-between mb-4">
             <TabsList>
               <TabsTrigger value="cars" className="gap-2">
-                <CarIcon className="w-4 h-4" /> {t("cars")} ({cars.length})
+                <CarIcon className="w-4 h-4" /> {t("cars")} ({filteredCars.length})
               </TabsTrigger>
               <TabsTrigger value="tracks" className="gap-2">
-                <MapPin className="w-4 h-4" /> {t("tracks")} ({tracks.length})
+                <MapPin className="w-4 h-4" /> {t("tracks")} ({filteredTracks.length})
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="cars" className="mt-0">
+          <TabsContent value="cars" className="mt-0 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar carro por nome..."
+                value={carSearch}
+                onChange={(e) => setCarSearch(e.target.value)}
+                className="pl-9 bg-background"
+              />
+            </div>
+
+            {brands.length > 0 && (
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex gap-2 pb-2">
+                  <button
+                    onClick={() => setSelectedBrands([])}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedBrands.length === 0
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-border"
+                      }`}
+                  >
+                    Todas
+                  </button>
+                  {brands.map((brand) => (
+                    <button
+                      key={brand.id}
+                      onClick={() => {
+                        setSelectedBrands((prev) =>
+                          prev.includes(brand.name)
+                            ? prev.filter((b) => b !== brand.name)
+                            : [...prev, brand.name]
+                        );
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedBrands.includes(brand.name)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border"
+                        }`}
+                    >
+                      {brand.s3BadgeUrl && (
+                        <Image
+                          src={brand.s3BadgeUrl}
+                          alt={brand.name}
+                          width={16}
+                          height={16}
+                          className="rounded-sm object-contain"
+                        />
+                      )}
+                      {brand.name}
+                    </button>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            )}
+
+            {selectedBrands.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                <span className="text-xs text-muted-foreground font-medium">Filtros ativos:</span>
+                {selectedBrands.map((brandName) => {
+                  const brand = brands.find((b) => b.name === brandName);
+                  return (
+                    <Badge key={brandName} variant="secondary" className="gap-1 pr-1">
+                      {brand?.s3BadgeUrl && (
+                        <Image src={brand.s3BadgeUrl} alt={brandName} width={12} height={12} className="rounded-sm object-contain" />
+                      )}
+                      {brandName}
+                      <button onClick={() => setSelectedBrands((prev) => prev.filter((b) => b !== brandName))} className="ml-1 hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+                <button onClick={() => setSelectedBrands([])} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  Limpar tudo
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {cars.map((car) => (
+              {filteredCars.map((car) => (
                 <Card key={car.id} className="overflow-hidden relative group">
                   {car.isMod && (
                     <Badge className="absolute top-2 right-2 z-10 bg-blue-600">
@@ -540,12 +675,12 @@ export default function ContentPage() {
                   <div className="p-3">
                     <p className="font-semibold text-sm truncate">{car.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {car.folderName}
+                      {car.brand || car.folderName}
                     </p>
                   </div>
                 </Card>
               ))}
-              {cars.length === 0 && (
+              {filteredCars.length === 0 && (
                 <p className="text-muted-foreground col-span-full py-8 text-center border rounded-lg">
                   {t("noCars")}
                 </p>
@@ -553,9 +688,54 @@ export default function ContentPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="tracks" className="mt-0">
+          <TabsContent value="tracks" className="mt-0 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar pista por nome..."
+                value={trackSearch}
+                onChange={(e) => setTrackSearch(e.target.value)}
+                className="pl-9 bg-background"
+              />
+            </div>
+
+            {uniqueCountries.length > 0 && (
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex gap-2 pb-2">
+                  <button
+                    onClick={() => setSelectedCountries([])}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedCountries.length === 0
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-border"
+                      }`}
+                  >
+                    Todos
+                  </button>
+                  {uniqueCountries.map((country) => (
+                    <button
+                      key={country}
+                      onClick={() => {
+                        setSelectedCountries((prev) =>
+                          prev.includes(country)
+                            ? prev.filter((c) => c !== country)
+                            : [...prev, country]
+                        );
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedCountries.includes(country)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border"
+                        }`}
+                    >
+                      {getCountryFlag(country === "__others" ? null : country)} {country === "__others" ? "Outros" : country}
+                    </button>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {tracks.map((track) => (
+              {filteredTracks.map((track) => (
                 <Card key={track.id} className="overflow-hidden relative group">
                   {track.isMod && (
                     <Badge className="absolute top-2 right-2 z-10 bg-blue-600">
@@ -582,7 +762,7 @@ export default function ContentPage() {
                         {track.name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {track.folderName}
+                        {track.country ? `${getCountryFlag(track.country)} ${track.country}` : track.folderName}
                       </p>
                     </div>
                     <Badge
@@ -594,7 +774,7 @@ export default function ContentPage() {
                   </div>
                 </Card>
               ))}
-              {tracks.length === 0 && (
+              {filteredTracks.length === 0 && (
                 <p className="text-muted-foreground col-span-full py-8 text-center border rounded-lg">
                   {t("noTracks")}
                 </p>

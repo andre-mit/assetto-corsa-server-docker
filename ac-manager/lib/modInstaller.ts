@@ -104,28 +104,96 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
           update: {
             name: mod.uiData.name || mod.id,
             pitboxes: pitboxes,
+            country: mod.uiData.country || null,
             s3ImageUrl: s3Url || undefined
           },
           create: {
             folderName: mod.id,
             name: mod.uiData.name || mod.id,
             pitboxes: pitboxes,
+            country: mod.uiData.country || null,
             isMod: true,
             s3ImageUrl: s3Url
           }
         });
       } else if (mod.type === 'car') {
+        let brandId: string | null = null;
+        const brandName = mod.uiData.brand;
+
+        if (brandName) {
+          const existingBrand = await prisma.brand.findUnique({ where: { name: brandName } });
+
+          if (existingBrand) {
+            brandId = existingBrand.id;
+
+            if (!existingBrand.s3BadgeUrl && mod.badgeImage && process.env.S3_BUCKET_NAME) {
+              try {
+                const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
+                await s3.send(new PutObjectCommand({
+                  Bucket: process.env.S3_BUCKET_NAME,
+                  Key: badgeKey,
+                  Body: mod.badgeImage,
+                  ContentType: 'image/png',
+                  ACL: 'public-read'
+                }));
+
+                let baseUrl = process.env.S3_PUBLIC_URL;
+                if (baseUrl) {
+                  if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
+                    baseUrl = baseUrl.endsWith('/') ? `${baseUrl}${process.env.S3_BUCKET_NAME}` : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
+                  }
+                  await prisma.brand.update({ where: { id: existingBrand.id }, data: { s3BadgeUrl: `${baseUrl}/${badgeKey}` } });
+                }
+              } catch (e) { console.warn(`[modInstaller] Failed to upload badge for brand ${brandName}:`, e); }
+            }
+          } else {
+            let s3BadgeUrl: string | null = null;
+
+            if (mod.badgeImage && process.env.S3_BUCKET_NAME) {
+              try {
+                const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
+                await s3.send(new PutObjectCommand({
+                  Bucket: process.env.S3_BUCKET_NAME,
+                  Key: badgeKey,
+                  Body: mod.badgeImage,
+                  ContentType: 'image/png',
+                  ACL: 'public-read'
+                }));
+
+                let baseUrl = process.env.S3_PUBLIC_URL;
+                if (baseUrl) {
+                  if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
+                    baseUrl = baseUrl.endsWith('/') ? `${baseUrl}${process.env.S3_BUCKET_NAME}` : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
+                  }
+                  s3BadgeUrl = `${baseUrl}/${badgeKey}`;
+                }
+              } catch (e) { console.warn(`[modInstaller] Failed to upload badge for brand ${brandName}:`, e); }
+            }
+
+            const newBrand = await prisma.brand.create({
+              data: {
+                name: brandName,
+                country: mod.uiData.country || null,
+                s3BadgeUrl,
+              }
+            });
+            brandId = newBrand.id;
+          }
+        }
+
         await prisma.car.upsert({
           where: { folderName: mod.id },
           update: {
             name: mod.uiData.name || mod.id,
-            brand: mod.uiData.brand,
+            brand: brandName || null,
+            brandId: brandId,
             s3ImageUrl: s3Url || undefined
           },
           create: {
             folderName: mod.id,
             name: mod.uiData.name || mod.id,
-            brand: mod.uiData.brand,
+            brand: brandName || null,
+            brandId: brandId,
             isMod: true,
             s3ImageUrl: s3Url
           }

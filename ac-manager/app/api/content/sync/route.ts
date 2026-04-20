@@ -66,23 +66,28 @@ export async function POST() {
                 const fileContent = await fs.readFile(jsonPath, 'utf-8');
                 const data = JSON.parse(fileContent);
                 const uniqueFolderId = isDefault ? trackId : `${trackId}_${layoutId}`;
+                const trackCountry = data.country || null;
 
                 let s3ImageUrl: string | null = null;
                 try {
                   const imageBuffer = await fs.readFile(previewPath);
                   s3ImageUrl = await uploadToS3(imageBuffer, `official/tracks/${uniqueFolderId}/preview.png`);
-                } catch (imgError) { }
+                } catch (imgError) {
+                  console.error(`[api/content/sync] Error reading preview for track ${trackId}:`, imgError);
+                }
 
                 await prisma.track.upsert({
                   where: { folderName: uniqueFolderId },
-                  update: { name: data.name || uniqueFolderId, pitboxes: parseInt(data.pitboxes, 10) || 10, ...(s3ImageUrl && { s3ImageUrl }) },
-                  create: { folderName: uniqueFolderId, name: data.name || uniqueFolderId, pitboxes: parseInt(data.pitboxes, 10) || 10, isMod: false, s3ImageUrl }
+                  update: { name: data.name || uniqueFolderId, pitboxes: parseInt(data.pitboxes, 10) || 10, country: trackCountry, ...(s3ImageUrl && { s3ImageUrl }) },
+                  create: { folderName: uniqueFolderId, name: data.name || uniqueFolderId, pitboxes: parseInt(data.pitboxes, 10) || 10, country: trackCountry, isMod: false, s3ImageUrl }
                 });
                 tracksCount++;
-              } catch (e) { }
+              } catch (e) {
+                console.error(`[api/content/sync] Error reading ui_track.json for track ${trackId}:`, e);
+              }
             }
           }
-        } catch (e) {
+        } catch {
           await prisma.track.upsert({
             where: { folderName: trackId },
             update: { name: trackId },
@@ -91,7 +96,7 @@ export async function POST() {
           tracksCount++;
         }
       }
-    } catch (error) {
+    } catch {
       console.warn('Tracks directory not found, skipping.');
     }
 
@@ -103,6 +108,7 @@ export async function POST() {
 
         let carName = carId;
         let carBrand = 'Kunos';
+        let carCountry: string | null = null;
         let s3ImageUrl: string | null = null;
 
         try {
@@ -110,22 +116,63 @@ export async function POST() {
           const data = JSON.parse(fileContent);
           carName = data.name || carId;
           carBrand = data.brand || 'Kunos';
+          carCountry = data.country || null;
 
+          const skinsDir = path.join(carsDir, carId, 'skins');
           try {
-            const imageBuffer = await fs.readFile(badgePath);
-            s3ImageUrl = await uploadToS3(imageBuffer, `official/cars/${carId}/badge.png`);
-          } catch (imgError) { }
-        } catch (e) {
+            const skins = await fs.readdir(skinsDir);
+            for (const skin of skins) {
+              const skinPreview = path.join(skinsDir, skin, 'preview.jpg');
+              try {
+                const imgBuf = await fs.readFile(skinPreview);
+                s3ImageUrl = await uploadToS3(imgBuf, `official/cars/${carId}/preview.jpg`);
+                break;
+              } catch (e: unknown) {
+                console.error(`[api/content/sync] Error reading skin ${skin}:`, e);
+              }
+            }
+          } catch (e: unknown) {
+            console.error(`[api/content/sync] Error reading skins for car ${carId}:`, e);
+          }
+        } catch (e: unknown) {
+          console.error(`[api/content/sync] Error reading car ${carId}:`, e);
+        }
+
+        let brandId: string | null = null;
+        const existingBrand = await prisma.brand.findUnique({ where: { name: carBrand } });
+
+        if (existingBrand) {
+          brandId = existingBrand.id;
+          if (!existingBrand.s3BadgeUrl) {
+            try {
+              const badgeBuf = await fs.readFile(badgePath);
+              const badgeUrl = await uploadToS3(badgeBuf, `brands/${carBrand.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`);
+              if (badgeUrl) {
+                await prisma.brand.update({ where: { id: existingBrand.id }, data: { s3BadgeUrl: badgeUrl, country: carCountry } });
+              }
+            } catch { }
+          }
+        } else {
+          let s3BadgeUrl: string | null = null;
+          try {
+            const badgeBuf = await fs.readFile(badgePath);
+            s3BadgeUrl = await uploadToS3(badgeBuf, `brands/${carBrand.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`);
+          } catch { }
+
+          const newBrand = await prisma.brand.create({
+            data: { name: carBrand, country: carCountry, s3BadgeUrl }
+          });
+          brandId = newBrand.id;
         }
 
         await prisma.car.upsert({
           where: { folderName: carId },
-          update: { name: carName, brand: carBrand, ...(s3ImageUrl && { s3ImageUrl }) },
-          create: { folderName: carId, name: carName, brand: carBrand, isMod: false, s3ImageUrl: s3ImageUrl }
+          update: { name: carName, brand: carBrand, brandId, ...(s3ImageUrl && { s3ImageUrl }) },
+          create: { folderName: carId, name: carName, brand: carBrand, brandId, isMod: false, s3ImageUrl }
         });
         carsCount++;
       }
-    } catch (error) {
+    } catch {
       console.warn('Cars directory not found, skipping.');
     }
 

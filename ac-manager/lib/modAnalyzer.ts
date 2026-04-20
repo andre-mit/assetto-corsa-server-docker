@@ -6,8 +6,9 @@ export interface NormalizedMod {
   type: 'car' | 'track';
   id: string;
   sourcePath: string;
-  uiData: CarUIData & TrackUIData; // Combined for easier access during analysis
-  previewImage: Buffer | null;
+  uiData: CarUIData & TrackUIData;
+  previewImage: Buffer | null;   // skin preview for cars, track preview for tracks
+  badgeImage: Buffer | null;     // brand badge.png (cars only)
 }
 
 async function findUIFiles(dir: string, fileList: string[] = []): Promise<string[]> {
@@ -40,6 +41,24 @@ function getModRoot(jsonPath: string): string {
   throw new Error("Invalid structure: Folder 'ui' not found in the hierarchy.");
 }
 
+async function findFirstSkinPreview(modRoot: string): Promise<Buffer | null> {
+  const skinsDir = path.join(modRoot, 'skins');
+  try {
+    const skins = await fs.readdir(skinsDir);
+    for (const skin of skins) {
+      const previewPath = path.join(skinsDir, skin, 'preview.jpg');
+      try {
+        return await fs.readFile(previewPath);
+      } catch {
+        console.log(`[modAnalyzer] Skin preview not found for ${skin}`);
+      }
+    }
+  } catch {
+    console.log(`[modAnalyzer] No skins directory found for ${modRoot}`);
+  }
+  return null;
+}
+
 export async function analyzeExtractedMod(extractedTempDir: string): Promise<NormalizedMod[]> {
   const uiFiles = await findUIFiles(extractedTempDir);
   const modsFound: NormalizedMod[] = [];
@@ -59,24 +78,29 @@ export async function analyzeExtractedMod(extractedTempDir: string): Promise<Nor
       const uiData = JSON.parse(uiContent) as CarUIData & TrackUIData;
 
       let previewBuffer: Buffer | null = null;
-      try {
-        if (isTrack) {
+      let badgeBuffer: Buffer | null = null;
+
+      if (isTrack) {
+        try {
           const previewPath = path.join(path.dirname(jsonPath), 'preview.png');
           previewBuffer = await fs.readFile(previewPath);
-        } else {
+        } catch { }
+      } else {
+        previewBuffer = await findFirstSkinPreview(modRoot);
+
+        try {
           const badgePath = path.join(modRoot, 'ui', 'badge.png');
-          previewBuffer = await fs.readFile(badgePath);
-        }
-      } catch (imgError) {
-        console.warn(`[modAnalyzer] Image not found for mod ${modId}.`);
+          badgeBuffer = await fs.readFile(badgePath);
+        } catch { }
       }
 
       modsFound.push({
         type: isTrack ? 'track' : 'car',
         id: modId,
         sourcePath: modRoot,
-        uiData: uiData,
-        previewImage: previewBuffer
+        uiData,
+        previewImage: previewBuffer,
+        badgeImage: badgeBuffer,
       });
 
     } catch (err: unknown) {

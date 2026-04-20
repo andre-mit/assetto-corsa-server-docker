@@ -19,11 +19,21 @@ model User {
   createdUsers User[]  @relation("CreatedUsers")
 }
 
+model Brand {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  country     String?
+  s3BadgeUrl  String?
+  cars        Car[]
+  createdAt   DateTime @default(now())
+}
+
 model Track {
   id          String   @id @default(cuid())
   folderName  String   @unique
   name        String
   pitboxes    Int
+  country     String?
   s3ImageUrl  String?
   isMod       Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -34,6 +44,8 @@ model Car {
   folderName  String   @unique
   name        String
   brand       String?
+  brandRef    Brand?   @relation(fields: [brandId], references: [id])
+  brandId     String?
   s3ImageUrl  String?
   isMod       Boolean  @default(false)
   createdAt   DateTime @default(now())

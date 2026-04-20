@@ -79,11 +79,19 @@ export interface AcEntryListSlot {
 
 export type AcEntryList = Record<string, AcEntryListSlot>;
 
+export interface Brand {
+  id: string;
+  name: string;
+  country: string | null;
+  s3BadgeUrl: string | null;
+}
+
 export interface Track {
   id: string;
   folderName: string;
   name: string;
   pitboxes: number;
+  country: string | null;
   isMod: boolean;
   s3ImageUrl: string | null;
   createdAt: string | Date;
@@ -94,6 +102,8 @@ export interface Car {
   folderName: string;
   name: string;
   brand: string | null;
+  brandId: string | null;
+  brandRef?: Brand | null;
   isMod: boolean;
   s3ImageUrl: string | null;
   createdAt: string | Date;
@@ -113,9 +123,11 @@ export type Job = {
 export interface CarUIData {
   name?: string;
   brand?: string;
+  country?: string;
 }
 
 export interface TrackUIData {
   name?: string;
   pitboxes?: string | number;
+  country?: string;
 }

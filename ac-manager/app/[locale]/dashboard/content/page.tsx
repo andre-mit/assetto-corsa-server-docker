@@ -76,10 +76,9 @@ export default function ContentPage() {
           newJobs.unshift(updatedJob);
         }
 
-        // Show toast notifications on completion
         if (updatedJob.status === "SUCCESS") {
           toast.success(t("success"));
-          fetchData(); // Refresh tracks and cars
+          fetchData();
         } else if (updatedJob.status === "FAILED") {
           toast.error(`${t("installError")}: ${updatedJob.error}`);
         }
@@ -148,23 +147,38 @@ export default function ContentPage() {
           const end = Math.min(start + CHUNK_SIZE, file.size);
           const chunk = file.slice(start, end);
 
-          const response = await fetch("/api/mods/upload", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/octet-stream",
-              "x-upload-id": uniqueUploadId,
-              "x-chunk-index": chunkIndex.toString(),
-              "x-total-chunks": totalChunks.toString(),
-              "x-file-name": encodeURIComponent(file.name),
-            },
-            body: chunk,
-          });
+          let retries = 3;
+          let success = false;
 
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Chunk upload failed");
+          while (retries > 0 && !success) {
+            try {
+              const response = await fetch("/api/mods/upload", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/octet-stream",
+                  "x-upload-id": uniqueUploadId,
+                  "x-chunk-index": chunkIndex.toString(),
+                  "x-total-chunks": totalChunks.toString(),
+                  "x-file-name": encodeURIComponent(file.name),
+                },
+                body: chunk,
+              });
+
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.error || "Chunk upload failed");
+              }
+              lastResponseData = data;
+              success = true;
+            } catch (err) {
+              retries--;
+              if (retries === 0) {
+                throw err;
+              }
+              // Wait 2 seconds before retrying this chunk to allow the server's I/O to breathe
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
           }
-          lastResponseData = data;
 
           // Visual progress for the chunks specifically
           const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
@@ -200,7 +214,6 @@ export default function ContentPage() {
       return;
     }
 
-    // Auto-prepend http if user just pastes a domain link
     if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
       cleanUrl = `https://${cleanUrl}`;
     }

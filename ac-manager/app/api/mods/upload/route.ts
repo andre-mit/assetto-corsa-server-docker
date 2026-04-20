@@ -27,10 +27,20 @@ export async function POST(request: Request) {
     const safeUploadId = uploadId.replace(/[^a-zA-Z0-9.-_]/g, '');
     const tempZipPath = path.join(TEMP_DIR, `upload_${safeUploadId}.zip`);
 
-    // Parse purely bounded bytes directly to circumvent multipart slowdowns
-    // ArrayBuffer flushes cleanly after context bounds, closing the Traefik request properly.
+    // Touch the file to guarantee it exists before calculating offset lengths
+    const initialHandle = await fs.promises.open(tempZipPath, 'a');
+    await initialHandle.close();
+
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB standard
+    const offset = chunkIndex * CHUNK_SIZE;
+
+    // Parse bounded bytes securely avoiding RAM stalls
     const buffer = Buffer.from(await request.arrayBuffer());
-    await fs.promises.appendFile(tempZipPath, buffer);
+
+    // Injection via precise descriptors for completely Safe/Idempotent retries
+    const fh = await fs.promises.open(tempZipPath, 'r+');
+    await fh.write(buffer, 0, buffer.length, offset);
+    await fh.close();
 
     console.log(`[api/mods/upload] Received chunk ${chunkIndex + 1}/${totalChunks} for ${filename}`);
 

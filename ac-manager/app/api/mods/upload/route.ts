@@ -8,16 +8,18 @@ const TEMP_DIR = path.join(process.cwd(), 'tmp');
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const chunk = formData.get('chunk') as File | null;
-    const filename = formData.get('filename') as string | null;
-    const uploadId = formData.get('uploadId') as string | null;
-    const chunkIndex = parseInt(formData.get('chunkIndex') as string, 10);
-    const totalChunks = parseInt(formData.get('totalChunks') as string, 10);
+    const filenameEncoded = request.headers.get("x-file-name");
+    const uploadId = request.headers.get("x-upload-id");
+    const chunkIndexStr = request.headers.get("x-chunk-index");
+    const totalChunksStr = request.headers.get("x-total-chunks");
 
-    if (!chunk || !filename || !uploadId) {
-      return NextResponse.json({ error: 'Missing chunk data or identifiers.' }, { status: 400 });
+    if (!filenameEncoded || !uploadId || !chunkIndexStr || !totalChunksStr) {
+      return NextResponse.json({ error: 'Missing chunk headers.' }, { status: 400 });
     }
+
+    const filename = decodeURIComponent(filenameEncoded);
+    const chunkIndex = parseInt(chunkIndexStr, 10);
+    const totalChunks = parseInt(totalChunksStr, 10);
 
     await fs.promises.mkdir(TEMP_DIR, { recursive: true });
     
@@ -25,9 +27,8 @@ export async function POST(request: Request) {
     const safeUploadId = uploadId.replace(/[^a-zA-Z0-9.-_]/g, '');
     const tempZipPath = path.join(TEMP_DIR, `upload_${safeUploadId}.zip`);
     
-    // Append chunk to the file
-    // We expect sequential chunks because the client awaits each fetch.
-    const buffer = Buffer.from(await chunk.arrayBuffer());
+    // Read raw buffer from the request completely circumventing huge Next.js Parsers
+    const buffer = Buffer.from(await request.arrayBuffer());
     await fs.promises.appendFile(tempZipPath, buffer);
 
     console.log(`[api/mods/upload] Received chunk ${chunkIndex + 1}/${totalChunks} for ${filename}`);

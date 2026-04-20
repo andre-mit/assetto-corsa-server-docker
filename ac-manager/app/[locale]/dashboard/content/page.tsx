@@ -148,16 +148,16 @@ export default function ContentPage() {
           const end = Math.min(start + CHUNK_SIZE, file.size);
           const chunk = file.slice(start, end);
 
-          const formData = new FormData();
-          formData.append('chunk', chunk, file.name);
-          formData.append('filename', file.name);
-          formData.append('uploadId', uniqueUploadId);
-          formData.append('chunkIndex', chunkIndex.toString());
-          formData.append('totalChunks', totalChunks.toString());
-
           const response = await fetch("/api/mods/upload", {
             method: "POST",
-            body: formData,
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "x-upload-id": uniqueUploadId,
+              "x-chunk-index": chunkIndex.toString(),
+              "x-total-chunks": totalChunks.toString(),
+              "x-file-name": encodeURIComponent(file.name),
+            },
+            body: chunk,
           });
 
           const data = await response.json();

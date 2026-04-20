@@ -27,32 +27,10 @@ export async function POST(request: Request) {
     const safeUploadId = uploadId.replace(/[^a-zA-Z0-9.-_]/g, '');
     const tempZipPath = path.join(TEMP_DIR, `upload_${safeUploadId}.zip`);
 
-    // Stream directly via Web Streams pipe to avoid any Memory Lock/Event Loop Blocks on V8
-    if (!request.body) {
-      return NextResponse.json({ error: 'Request body is empty.' }, { status: 400 });
-    }
-
-    const fileStream = fs.createWriteStream(tempZipPath, { flags: 'a' });
-    const reader = request.body.getReader();
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const canWrite = fileStream.write(value);
-        if (!canWrite) {
-          await new Promise<void>(resolve => fileStream.once('drain', resolve));
-        }
-      }
-    } finally {
-      fileStream.end();
-      // Ensure the write stream finishes writing cleanly before continuing process
-      await new Promise<void>((resolve, reject) => {
-        fileStream.on('finish', resolve);
-        fileStream.on('error', reject);
-      });
-    }
+    // Parse purely bounded bytes directly to circumvent multipart slowdowns
+    // ArrayBuffer flushes cleanly after context bounds, closing the Traefik request properly.
+    const buffer = Buffer.from(await request.arrayBuffer());
+    await fs.promises.appendFile(tempZipPath, buffer);
 
     console.log(`[api/mods/upload] Received chunk ${chunkIndex + 1}/${totalChunks} for ${filename}`);
 

@@ -1,28 +1,12 @@
 import fs from 'fs/promises';
 import path from 'path';
 import extract from 'extract-zip';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { uploadToS3 } from './s3';
 import { analyzeExtractedMod } from './modAnalyzer';
 import prisma from './prisma';
 
 const CONTENT_DIR = path.join(process.cwd(), 'game-content');
 const TEMP_DIR = path.join(process.cwd(), 'tmp');
-
-// Format the endpoint correctly (AWS SDK crashes if a host:port doesn't have http://)
-let s3Endpoint = process.env.S3_ENDPOINT;
-if (s3Endpoint && !s3Endpoint.startsWith('http://') && !s3Endpoint.startsWith('https://')) {
-  s3Endpoint = `http://${s3Endpoint}`;
-}
-
-const s3 = new S3Client({
-  region: process.env.S3_REGION || 'us-east-1',
-  endpoint: s3Endpoint,
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY || '',
-    secretAccessKey: process.env.S3_SECRET_KEY || '',
-  },
-  forcePathStyle: true, // Often required for local/MinIO setups
-});
 
 export interface ModInstallationResult {
   success: boolean;
@@ -63,35 +47,8 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
       await fs.cp(mod.sourcePath, targetDir, { recursive: true, force: true });
 
       let s3Url: string | null = null;
-      if (mod.previewImage && process.env.S3_BUCKET_NAME) {
-        const s3Key = `mods/${mod.type}s/${mod.id}/preview.png`;
-
-        try {
-          await s3.send(new PutObjectCommand({
-            Bucket: process.env.S3_BUCKET_NAME,
-            Key: s3Key,
-            Body: mod.previewImage,
-            ContentType: 'image/png',
-            ACL: 'public-read'
-          }));
-
-          let baseUrl = process.env.S3_PUBLIC_URL;
-
-          if (baseUrl) {
-            // Automatically append the bucket name if it's missing (very common with MinIO)
-            if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
-              baseUrl = baseUrl.endsWith('/')
-                ? `${baseUrl}${process.env.S3_BUCKET_NAME}`
-                : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
-            }
-            s3Url = `${baseUrl}/${s3Key}`;
-          } else {
-            s3Url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`;
-          }
-
-        } catch (s3err) {
-          console.warn(`[modInstaller] Failed to upload preview to S3 for ${mod.id}. Mod installation will continue. Error:`, s3err);
-        }
+      if (mod.previewImage) {
+        s3Url = await uploadToS3(mod.previewImage, `mods/${mod.type}s/${mod.id}/preview.png`);
       }
 
       if (mod.type === 'track') {
@@ -126,48 +83,18 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
           if (existingBrand) {
             brandId = existingBrand.id;
 
-            if (!existingBrand.s3BadgeUrl && mod.badgeImage && process.env.S3_BUCKET_NAME) {
-              try {
-                const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
-                await s3.send(new PutObjectCommand({
-                  Bucket: process.env.S3_BUCKET_NAME,
-                  Key: badgeKey,
-                  Body: mod.badgeImage,
-                  ContentType: 'image/png',
-                  ACL: 'public-read'
-                }));
-
-                let baseUrl = process.env.S3_PUBLIC_URL;
-                if (baseUrl) {
-                  if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
-                    baseUrl = baseUrl.endsWith('/') ? `${baseUrl}${process.env.S3_BUCKET_NAME}` : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
-                  }
-                  await prisma.brand.update({ where: { id: existingBrand.id }, data: { s3BadgeUrl: `${baseUrl}/${badgeKey}` } });
-                }
-              } catch (e) { console.warn(`[modInstaller] Failed to upload badge for brand ${brandName}:`, e); }
+            if (!existingBrand.s3BadgeUrl && mod.badgeImage) {
+              const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
+              const badgeUrl = await uploadToS3(mod.badgeImage, badgeKey);
+              if (badgeUrl) {
+                await prisma.brand.update({ where: { id: existingBrand.id }, data: { s3BadgeUrl: badgeUrl } });
+              }
             }
           } else {
             let s3BadgeUrl: string | null = null;
-
-            if (mod.badgeImage && process.env.S3_BUCKET_NAME) {
-              try {
-                const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
-                await s3.send(new PutObjectCommand({
-                  Bucket: process.env.S3_BUCKET_NAME,
-                  Key: badgeKey,
-                  Body: mod.badgeImage,
-                  ContentType: 'image/png',
-                  ACL: 'public-read'
-                }));
-
-                let baseUrl = process.env.S3_PUBLIC_URL;
-                if (baseUrl) {
-                  if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
-                    baseUrl = baseUrl.endsWith('/') ? `${baseUrl}${process.env.S3_BUCKET_NAME}` : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
-                  }
-                  s3BadgeUrl = `${baseUrl}/${badgeKey}`;
-                }
-              } catch (e) { console.warn(`[modInstaller] Failed to upload badge for brand ${brandName}:`, e); }
+            if (mod.badgeImage) {
+              const badgeKey = `brands/${brandName.replace(/[^a-zA-Z0-9]/g, '_')}/badge.png`;
+              s3BadgeUrl = await uploadToS3(mod.badgeImage, badgeKey);
             }
 
             const newBrand = await prisma.brand.create({

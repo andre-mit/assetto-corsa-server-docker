@@ -6,13 +6,20 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const CONTENT_DIR = path.join(process.cwd(), "game-content");
 
+// Format the endpoint correctly (AWS SDK crashes if a host:port doesn't have http://)
+let s3Endpoint = process.env.S3_ENDPOINT;
+if (s3Endpoint && !s3Endpoint.startsWith('http://') && !s3Endpoint.startsWith('https://')) {
+  s3Endpoint = `http://${s3Endpoint}`;
+}
+
 const s3 = new S3Client({
   region: process.env.S3_REGION || "us-east-1",
-  endpoint: process.env.S3_ENDPOINT,
+  endpoint: s3Endpoint,
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY || "",
     secretAccessKey: process.env.S3_SECRET_KEY || "",
   },
+  forcePathStyle: true,
 });
 
 async function uploadToS3(buffer: Buffer, key: string): Promise<string | null> {
@@ -29,9 +36,16 @@ async function uploadToS3(buffer: Buffer, key: string): Promise<string | null> {
       }),
     );
 
-    return process.env.S3_PUBLIC_URL
-      ? `${process.env.S3_PUBLIC_URL}/${key}`
-      : `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+    let baseUrl = process.env.S3_PUBLIC_URL;
+    if (baseUrl) {
+      if (!baseUrl.endsWith(process.env.S3_BUCKET_NAME as string)) {
+        baseUrl = baseUrl.endsWith('/')
+          ? `${baseUrl}${process.env.S3_BUCKET_NAME}`
+          : `${baseUrl}/${process.env.S3_BUCKET_NAME}`;
+      }
+      return `${baseUrl}/${key}`;
+    }
+    return `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
   } catch (err: unknown) {
     const error = err as Error;
     console.error(`[api/content/sync] Error uploading key ${key} to S3:`, error.message || error);

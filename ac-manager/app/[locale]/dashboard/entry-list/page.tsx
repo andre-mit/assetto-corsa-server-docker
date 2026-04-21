@@ -37,12 +37,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { AcServerConfig, Track, Car, Brand } from "@/types/ac-server";
+import { AcServerConfig, Track, Car, Brand, Skin } from "@/types/ac-server";
 
 interface SelectedCarEntry {
   folderName: string;
   skins: string[];
-  allSkins: string[];
+  allSkins: Skin[];
   loadingSkins: boolean;
   expanded: boolean;
 }
@@ -104,7 +104,7 @@ export default function EntryListPage() {
                 updated[idx] = {
                   ...updated[idx],
                   allSkins: skins,
-                  skins: skins, // Default: all skins selected
+                  skins: skins.map(s => s.name), // Default: all skins selected
                   loadingSkins: false,
                 };
               }
@@ -123,7 +123,7 @@ export default function EntryListPage() {
     });
   }, []);
 
-  const fetchSkinsForCar = async (folderName: string): Promise<string[]> => {
+  const fetchSkinsForCar = async (folderName: string): Promise<Skin[]> => {
     try {
       const res = await fetch(`/api/content/cars/${folderName}/skins`);
       const data = await res.json();
@@ -150,7 +150,7 @@ export default function EntryListPage() {
       setSelectedCars((prev) =>
         prev.map((c) =>
           c.folderName === folderName
-            ? { ...c, allSkins: skins, skins: skins, loadingSkins: false }
+            ? { ...c, allSkins: skins, skins: skins.map(s => s.name), loadingSkins: false }
             : c
         )
       );
@@ -194,7 +194,7 @@ export default function EntryListPage() {
         const allSelected = c.skins.length === c.allSkins.length;
         return {
           ...c,
-          skins: allSelected ? [c.allSkins[0]] : [...c.allSkins],
+          skins: allSelected ? [c.allSkins[0].name] : c.allSkins.map(s => s.name),
         };
       })
     );
@@ -389,7 +389,6 @@ export default function EntryListPage() {
             </CardContent>
           </Card>
 
-          {/* Selected Cars sidebar */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -474,24 +473,34 @@ export default function EntryListPage() {
                                   {t("allSkins")} ({entry.allSkins.length})
                                 </label>
                               </div>
-                              <div className="max-h-40 overflow-y-auto space-y-1">
+                              <div className="max-h-60 overflow-y-auto space-y-2 py-1">
                                 {entry.allSkins.map((skin) => (
                                   <div
-                                    key={skin}
-                                    className="flex items-center gap-2"
+                                    key={skin.id}
+                                    className="flex items-center gap-2 group"
                                   >
                                     <Checkbox
-                                      checked={entry.skins.includes(skin)}
+                                      checked={entry.skins.includes(skin.name)}
                                       onCheckedChange={() =>
-                                        toggleSkin(entry.folderName, skin)
+                                        toggleSkin(entry.folderName, skin.name)
                                       }
-                                      id={`skin-${entry.folderName}-${skin}`}
+                                      id={`skin-${entry.folderName}-${skin.name}`}
                                     />
                                     <label
-                                      htmlFor={`skin-${entry.folderName}-${skin}`}
-                                      className="text-xs cursor-pointer truncate"
+                                      htmlFor={`skin-${entry.folderName}-${skin.name}`}
+                                      className="flex items-center gap-2 text-xs cursor-pointer truncate flex-1 min-w-0"
                                     >
-                                      {skin}
+                                      {skin.s3PreviewUrl && (
+                                        <div className="relative w-12 h-7 rounded border bg-muted overflow-hidden shrink-0">
+                                          <Image
+                                            src={skin.s3PreviewUrl}
+                                            alt={skin.name}
+                                            fill
+                                            className="object-cover"
+                                          />
+                                        </div>
+                                      )}
+                                      <span className="truncate">{skin.name}</span>
                                     </label>
                                   </div>
                                 ))}
@@ -508,7 +517,6 @@ export default function EntryListPage() {
           </Card>
         </div>
 
-        {/* Right column: Available Cars */}
         <div className="lg:col-span-2">
           <Card className="h-full">
             <CardHeader>

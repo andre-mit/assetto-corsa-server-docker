@@ -108,7 +108,7 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
           }
         }
 
-        await prisma.car.upsert({
+        const car = await prisma.car.upsert({
           where: { folderName: mod.id },
           update: {
             name: mod.uiData.name || mod.id,
@@ -125,6 +125,29 @@ export async function installModFromZip(zipPath: string): Promise<ModInstallatio
             s3ImageUrl: s3Url
           }
         });
+
+        // Scan and upsert skins for this car
+        try {
+          const skinsDir = path.join(targetDir, 'skins');
+          const skinEntries = await fs.readdir(skinsDir, { withFileTypes: true });
+          for (const skinEntry of skinEntries.filter(e => e.isDirectory())) {
+            let skinPreviewUrl: string | null = null;
+            try {
+              const previewBuf = await fs.readFile(path.join(skinsDir, skinEntry.name, 'preview.jpg'));
+              skinPreviewUrl = await uploadToS3(previewBuf, `mods/cars/${mod.id}/skins/${skinEntry.name}/preview.jpg`);
+            } catch {
+              console.log(`[modInstaller] No preview for skin ${skinEntry.name}`);
+            }
+
+            await prisma.skin.upsert({
+              where: { carId_name: { carId: car.id, name: skinEntry.name } },
+              update: { ...(skinPreviewUrl && { s3PreviewUrl: skinPreviewUrl }) },
+              create: { carId: car.id, name: skinEntry.name, s3PreviewUrl: skinPreviewUrl }
+            });
+          }
+        } catch {
+          console.log(`[modInstaller] No skins directory for car ${mod.id}`);
+        }
       }
     }
 

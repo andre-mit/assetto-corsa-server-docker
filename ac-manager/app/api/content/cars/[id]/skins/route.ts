@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-const CONTENT_DIR = path.join(process.cwd(), 'game-content');
+import prisma from '@/lib/prisma';
 
 export async function GET(
   _request: Request,
@@ -11,15 +8,22 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const skinsDir = path.join(CONTENT_DIR, 'cars', id, 'skins');
-    const entries = await fs.readdir(skinsDir, { withFileTypes: true });
-    const skins = entries
-      .filter(e => e.isDirectory())
-      .map(e => e.name);
+    const car = await prisma.car.findUnique({
+      where: { folderName: id },
+      select: {
+        skins: {
+          select: {
+            id: true,
+            name: true,
+            s3PreviewUrl: true,
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+    });
 
-    return NextResponse.json({ skins });
+    return NextResponse.json({ skins: car?.skins || [] });
   } catch {
-    // No skins directory or car doesn't exist
     return NextResponse.json({ skins: [] });
   }
 }

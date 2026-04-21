@@ -113,8 +113,6 @@ export default function ContentPage() {
         if (updatedJob.status === "SUCCESS") {
           toast.success(t("success"));
 
-          // To prevent aggressive database hits on multi-drop (50 files), 
-          // we ONLY fetch cars and tracks if no other job is pending.
           const activeJobsRemaining = newJobs.filter(j => ['PENDING', 'DOWNLOADING', 'EXTRACTING', 'INGESTING'].includes(j.status)).length;
 
           if (activeJobsRemaining === 0 && !isUploading) {
@@ -589,8 +587,8 @@ export default function ContentPage() {
                   <button
                     onClick={() => setSelectedBrands([])}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedBrands.length === 0
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-muted border-border"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-muted border-border"
                       }`}
                   >
                     {t("allBrands")}
@@ -606,8 +604,8 @@ export default function ContentPage() {
                         );
                       }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedBrands.includes(brand.name)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-muted border-border"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-border"
                         }`}
                     >
                       {brand.s3BadgeUrl && (
@@ -705,8 +703,8 @@ export default function ContentPage() {
                   <button
                     onClick={() => setSelectedCountries([])}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedCountries.length === 0
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-muted border-border"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-muted border-border"
                       }`}
                   >
                     {t("allCountries")}
@@ -722,8 +720,8 @@ export default function ContentPage() {
                         );
                       }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors shrink-0 ${selectedCountries.includes(country)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-muted border-border"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted border-border"
                         }`}
                     >
                       {getCountryFlag(country === "__others" ? null : country)} {country === "__others" ? t("others") : country}

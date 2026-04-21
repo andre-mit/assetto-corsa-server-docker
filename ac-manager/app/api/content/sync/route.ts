@@ -78,6 +78,7 @@ export async function POST() {
         let carBrand = 'Kunos';
         let carCountry: string | null = null;
         let s3ImageUrl: string | null = null;
+        const skinData: { name: string; s3PreviewUrl: string | null }[] = [];
 
         try {
           const fileContent = await fs.readFile(jsonPath, 'utf-8');
@@ -88,19 +89,23 @@ export async function POST() {
 
           const skinsDir = path.join(carsDir, carId, 'skins');
           try {
-            const skins = await fs.readdir(skinsDir);
-            for (const skin of skins) {
-              const skinPreview = path.join(skinsDir, skin, 'preview.jpg');
+            const skinEntries = await fs.readdir(skinsDir, { withFileTypes: true });
+            const skinDirs = skinEntries.filter(e => e.isDirectory());
+            for (const skinEntry of skinDirs) {
+              const skinPreview = path.join(skinsDir, skinEntry.name, 'preview.jpg');
               try {
                 const imgBuf = await fs.readFile(skinPreview);
-                s3ImageUrl = await uploadToS3(imgBuf, `official/cars/${carId}/preview.jpg`);
-                break;
-              } catch (e: unknown) {
-                console.error(`[api/content/sync] Error reading skin ${skin}:`, e);
+                if (!s3ImageUrl) {
+                  s3ImageUrl = await uploadToS3(imgBuf, `official/cars/${carId}/preview.jpg`);
+                }
+                const skinPreviewUrl = await uploadToS3(imgBuf, `official/cars/${carId}/skins/${skinEntry.name}/preview.jpg`);
+                skinData.push({ name: skinEntry.name, s3PreviewUrl: skinPreviewUrl });
+              } catch {
+                skinData.push({ name: skinEntry.name, s3PreviewUrl: null });
               }
             }
-          } catch (e: unknown) {
-            console.error(`[api/content/sync] Error reading skins for car ${carId}:`, e);
+          } catch {
+            console.log(`[api/content/sync] No skins directory for car ${carId}`);
           }
         } catch (e: unknown) {
           console.error(`[api/content/sync] Error reading car ${carId}:`, e);
@@ -133,11 +138,21 @@ export async function POST() {
           brandId = newBrand.id;
         }
 
-        await prisma.car.upsert({
+        const car = await prisma.car.upsert({
           where: { folderName: carId },
           update: { name: carName, brand: carBrand, brandId, ...(s3ImageUrl && { s3ImageUrl }) },
           create: { folderName: carId, name: carName, brand: carBrand, brandId, isMod: false, s3ImageUrl }
         });
+
+        // Upsert skins for this car
+        for (const skin of skinData) {
+          await prisma.skin.upsert({
+            where: { carId_name: { carId: car.id, name: skin.name } },
+            update: { ...(skin.s3PreviewUrl && { s3PreviewUrl: skin.s3PreviewUrl }) },
+            create: { carId: car.id, name: skin.name, s3PreviewUrl: skin.s3PreviewUrl }
+          });
+        }
+
         carsCount++;
       }
     } catch {

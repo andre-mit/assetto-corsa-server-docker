@@ -48,7 +48,19 @@ model Car {
   brandId     String?
   s3ImageUrl  String?
   isMod       Boolean  @default(false)
+  skins       Skin[]
   createdAt   DateTime @default(now())
+}
+
+model Skin {
+  id            String  @id @default(cuid())
+  name          String
+  car           Car     @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId         String
+  s3PreviewUrl  String?
+  createdAt     DateTime @default(now())
+
+  @@unique([carId, name])
 }
 
 model ModJob {

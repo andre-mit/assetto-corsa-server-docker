@@ -106,7 +106,15 @@ export interface Car {
   brandRef?: Brand | null;
   isMod: boolean;
   s3ImageUrl: string | null;
+  skins?: Skin[];
   createdAt: string | Date;
+}
+
+export interface Skin {
+  id: string;
+  name: string;
+  carId: string;
+  s3PreviewUrl: string | null;
 }
 
 export type Job = {

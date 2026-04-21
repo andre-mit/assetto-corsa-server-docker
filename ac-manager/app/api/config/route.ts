@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     const hasQualify = serverCfg.QUALIFY?.IS_OPEN == 1 || serverCfg.QUALIFY?.IS_OPEN === true;
     const hasRace = serverCfg.RACE?.IS_OPEN == 1 || serverCfg.RACE?.IS_OPEN === true;
 
+    // Remove disabled sessions from the config object so they are removed from the .ini file
+    if (!hasPractice) delete serverCfg.PRACTICE;
+    if (!hasQualify) delete serverCfg.QUALIFY;
+    if (!hasRace) delete serverCfg.RACE;
+
+    // Enforce at least one session to prevent server crash
     if (!hasPractice && !hasQualify && !hasRace) {
       serverCfg.PRACTICE = {
         NAME: "Practice",

@@ -166,7 +166,14 @@
       "INGESTING": "Finalizing...",
       "SUCCESS": "Installed!",
       "FAILED": "Failed"
-    }
+    },
+    "searchCar": "Search car by name...",
+    "searchTrack": "Search track by name...",
+    "allBrands": "All",
+    "allCountries": "All",
+    "others": "Others",
+    "activeFilters": "Active filters:",
+    "clearAll": "Clear all"
   },
   "EntryList": {
     "title": "Grid Setup",
@@ -175,6 +182,7 @@
     "selectTrack": "Select track",
     "selectTrackError": "Please select a track!",
     "selectCarError": "Please select at least one car!",
+    "selectSkinError": "Please select at least 1 skin for each car!",
     "maxClientsError": "The track supports a maximum of {max} slots.",
     "saveSuccess": "Grid updated! Pitboxes were successfully generated and distributed.",
     "circuit": "Circuit",
@@ -185,6 +193,19 @@
     "carRoster": "Car Roster",
     "carRosterDesc": "Select allowed vehicles. Slots will be distributed equally among selected cars.",
     "noCars": "No cars registered. Install mods first!",
-    "noImage": "No Image"
+    "noImage": "No Image",
+    "availableCars": "Available Cars",
+    "selectedCars": "Selected Cars",
+    "searchCar": "Search car by name...",
+    "allBrands": "All",
+    "addCar": "Add",
+    "removeCar": "Remove",
+    "skins": "Skins",
+    "allSkins": "All",
+    "noSkins": "No skins found",
+    "selected": "Selected",
+    "loadingSkins": "Loading skins...",
+    "noSelectedCars": "Click + on cars above to add them to the grid.",
+    "players": "players"
   }
 }

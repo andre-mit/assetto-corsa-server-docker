@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { serverCfg } = body;
+    const { serverCfg, carSkins } = body;
 
     if (!serverCfg.WEATHER_0) {
       serverCfg.WEATHER_0 = {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     const carsArray = serverCfg.SERVER.CARS.split(';').filter(Boolean);
     const maxClients = parseInt(serverCfg.SERVER.MAX_CLIENTS, 10);
     
-    await generateEntryList(carsArray, maxClients);
+    await generateEntryList(carsArray, maxClients, carSkins);
 
     console.log("[api/config] Configuration saved and entry_list generated");
     return NextResponse.json({ success: true, message: 'Files generated successfully.' });

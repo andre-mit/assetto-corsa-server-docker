@@ -576,7 +576,7 @@ export default function ContentPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar carro por nome..."
+                placeholder={t("searchCar")}
                 value={carSearch}
                 onChange={(e) => setCarSearch(e.target.value)}
                 className="pl-9 bg-background"
@@ -593,7 +593,7 @@ export default function ContentPage() {
                         : "bg-background hover:bg-muted border-border"
                       }`}
                   >
-                    Todas
+                    {t("allBrands")}
                   </button>
                   {brands.map((brand) => (
                     <button
@@ -629,7 +629,7 @@ export default function ContentPage() {
 
             {selectedBrands.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                <span className="text-xs text-muted-foreground font-medium">Filtros ativos:</span>
+                <span className="text-xs text-muted-foreground font-medium">{t("activeFilters")}</span>
                 {selectedBrands.map((brandName) => {
                   const brand = brands.find((b) => b.name === brandName);
                   return (
@@ -645,7 +645,7 @@ export default function ContentPage() {
                   );
                 })}
                 <button onClick={() => setSelectedBrands([])} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  Limpar tudo
+                  {t("clearAll")}
                 </button>
               </div>
             )}
@@ -692,7 +692,7 @@ export default function ContentPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar pista por nome..."
+                placeholder={t("searchTrack")}
                 value={trackSearch}
                 onChange={(e) => setTrackSearch(e.target.value)}
                 className="pl-9 bg-background"
@@ -709,7 +709,7 @@ export default function ContentPage() {
                         : "bg-background hover:bg-muted border-border"
                       }`}
                   >
-                    Todos
+                    {t("allCountries")}
                   </button>
                   {uniqueCountries.map((country) => (
                     <button
@@ -726,7 +726,7 @@ export default function ContentPage() {
                           : "bg-background hover:bg-muted border-border"
                         }`}
                     >
-                      {getCountryFlag(country === "__others" ? null : country)} {country === "__others" ? "Outros" : country}
+                      {getCountryFlag(country === "__others" ? null : country)} {country === "__others" ? t("others") : country}
                     </button>
                   ))}
                 </div>

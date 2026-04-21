@@ -23,19 +23,33 @@ export async function writeConfig(fileName: 'server_cfg.ini' | 'entry_list.ini',
   await fs.writeFile(filePath, iniContent, 'utf-8');
 }
 
-export async function generateEntryList(selectedCars: string[], maxClients: number) {
+export async function generateEntryList(
+  selectedCars: string[],
+  maxClients: number,
+  carSkins?: Record<string, string[]>
+) {
   if (!selectedCars || selectedCars.length === 0) {
     throw new Error('At least one car is required to generate the entry list.');
   }
 
   const entryList: AcEntryList = {};
+  const skinCounters: Record<string, number> = {};
+  const lines: string[] = [];
 
   for (let i = 0; i < maxClients; i++) {
     const carModel = selectedCars[i % selectedCars.length];
 
+    let skin = '';
+    if (carSkins && carSkins[carModel] && carSkins[carModel].length > 0) {
+      const skins = carSkins[carModel];
+      const idx = skinCounters[carModel] || 0;
+      skin = skins[idx % skins.length];
+      skinCounters[carModel] = idx + 1;
+    }
+
     entryList[`CAR_${i}`] = {
       MODEL: carModel,
-      SKIN: '',
+      SKIN: skin,
       SPECTATOR_MODE: 0,
       DRIVERNAME: '',
       TEAM: '',
@@ -43,12 +57,21 @@ export async function generateEntryList(selectedCars: string[], maxClients: numb
       BALLAST: 0,
       RESTRICTOR: 0
     };
+
+    lines.push(`[CAR_${i}]`);
+    lines.push(`MODEL=${carModel}`);
+    lines.push(`SKIN=${skin}`);
+    lines.push(`SPECTATOR_MODE=0`);
+    lines.push(`DRIVERNAME=`);
+    lines.push(`TEAM=`);
+    lines.push(`GUID=`);
+    lines.push(`BALLAST=0`);
+    lines.push(`RESTRICTOR=0`);
+    lines.push('');
   }
 
-  const iniContent = ini.stringify(entryList);
-
   const filePath = path.join(CONFIG_DIR, 'entry_list.ini');
-  await fs.writeFile(filePath, iniContent, 'utf-8');
+  await fs.writeFile(filePath, lines.join('\n'), 'utf-8');
 
   return entryList;
 }
